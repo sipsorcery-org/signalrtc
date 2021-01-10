@@ -1,0 +1,14 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'Release'
+
+steps:
+- script: dotnet publish src --configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory) --framework net5.0 --runtime linux-x64 --no-self-contained
+  displayName: 'dotnet publish $(buildConfiguration)'
+- upload: $(Build.ArtifactStagingDirectory)
+  artifact: drop
