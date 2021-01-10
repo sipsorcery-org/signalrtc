@@ -13,8 +13,10 @@
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
 //-----------------------------------------------------------------------------
 
+using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +86,14 @@ namespace devcall
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapGet("/", async context =>
+                {
+                    await context.Response.WriteAsync("Hello World!");
+                });
+                endpoints.MapGet("/version", async context =>
+                {
+                    await context.Response.WriteAsync(Program.GetVersion());
+                });
             });
 
             SIPSorcery.LogFactory.Set(app.ApplicationServices.GetService<ILoggerFactory>());

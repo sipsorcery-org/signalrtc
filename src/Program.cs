@@ -16,15 +16,17 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using Azure.Security.KeyVault.Certificates;
 using Azure.Security.KeyVault.Secrets;
 using Azure.Identity;
 using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Serilog;
-using Serilog.Events;
 using Serilog.Extensions.Logging;
 
 namespace devcall
@@ -62,9 +64,9 @@ namespace devcall
         public static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
                 .UseSerilog()
-                .ConfigureLogging(logging =>
-                  logging.AddAzureWebAppDiagnostics()
-                )
+                //.ConfigureLogging(logging =>
+                //  logging.AddAzureWebAppDiagnostics()
+                //)
                 .ConfigureAppConfiguration((context, config) =>
                 {
                     if (context.HostingEnvironment.IsProduction())
@@ -77,6 +79,30 @@ namespace devcall
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    var keyVaultCertName = Configuration["KeyVaultHttpsCertificateName"];
+
+                    if (!string.IsNullOrWhiteSpace(keyVaultCertName))
+                    {
+                        webBuilder.ConfigureKestrel(serverOptions =>
+                        {
+                            serverOptions.ConfigureHttpsDefaults(listenOptions =>
+                            {
+                                // For loading certificates from Azure Key Vault see:
+                                // https://github.com/Azure/azure-sdk-for-net/tree/master/sdk/keyvault/Azure.Security.KeyVault.Certificates#retrieve-a-certificate
+                                var client = new CertificateClient(vaultUri: new Uri($"https://{Configuration["KeyVaultName"]}.vault.azure.net/"),
+                                        credential: new DefaultAzureCredential());
+
+                                var certResponse = client.GetCertificate(keyVaultCertName);
+                                if (certResponse != null && certResponse.Value != null)
+                                {
+                                    X509Certificate2 cert = new X509Certificate2(certResponse.Value.Cer);
+                                    Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {cert.FriendlyName}.");
+                                    listenOptions.ServerCertificate = cert;
+                                }
+                            });
+                        });
+                    }
+
                     webBuilder.UseStartup<Startup>();
                 });
 
