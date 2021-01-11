@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>demo</RootNamespace>
-    <AssemblyVersion>0.0.5.0</AssemblyVersion>
-    <Version>0.0.5</Version>
+    <AssemblyVersion>0.0.6.0</AssemblyVersion>
+    <Version>0.0.6</Version>
   </PropertyGroup>
 
   <ItemGroup>

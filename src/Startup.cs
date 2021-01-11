@@ -49,8 +49,8 @@ namespace devcall
             services.AddDbContext<SIPAssetsDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
 
-            //services.AddSingleton(typeof(SIPHostedService));
-            //services.AddHostedService<SIPHostedService>();
+            services.AddSingleton(typeof(SIPHostedService));
+            services.AddHostedService<SIPHostedService>();
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
