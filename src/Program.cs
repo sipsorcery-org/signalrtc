@@ -18,19 +18,35 @@ using System.IO;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Hosting;
+using Azure.Extensions.AspNetCore.Configuration.Secrets;
+using Azure.Identity;
 using Azure.Security.KeyVault.Certificates;
 using Azure.Security.KeyVault.Secrets;
-using Azure.Identity;
-using Azure.Extensions.AspNetCore.Configuration.Secrets;
 using Serilog;
 using Serilog.Extensions.Logging;
 
 namespace devcall
 {
+    /// <summary>
+    /// Convenience class to hold the keys that are used to get configuration settings from
+    /// the appSettings files and elsewhere.
+    /// </summary>
+    public static class ConfigKeys
+    {
+        /// <summary>
+        /// The Azure key vault to load secrets and certificates from.
+        /// </summary>
+        public const string KEY_VAULT_NAME = "KeyVaultName";
+
+        /// <summary>
+        /// The name of the certificate in the Azure Key Vault to use for the HTTPS
+        /// end point.
+        /// </summary>
+        public const string KEY_VAULT_HTTPS_CERTIFICATE_NAME = "KeyVaultHttpsCertificateName";
+    }
+
     public class Program
     {
         // This configuration instnaces is made advailable early solely for the logging configuration.
@@ -72,40 +88,66 @@ namespace devcall
                     if (context.HostingEnvironment.IsProduction())
                     {
                         var builtConfig = config.Build();
-                        var secretClient = new SecretClient(new Uri($"https://{builtConfig["KeyVaultName"]}.vault.azure.net/"),
+                        var secretClient = new SecretClient(new Uri($"https://{builtConfig[ConfigKeys.KEY_VAULT_NAME]}.vault.azure.net/"),
                                                                  new DefaultAzureCredential());
                         config.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
                     }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    var keyVaultCertName = Configuration["KeyVaultHttpsCertificateName"];
-
-                    if (!string.IsNullOrWhiteSpace(keyVaultCertName))
-                    {
-                        webBuilder.ConfigureKestrel(serverOptions =>
-                        {
-                            serverOptions.ConfigureHttpsDefaults(listenOptions =>
-                            {
-                                // For loading certificates from Azure Key Vault see:
-                                // https://github.com/Azure/azure-sdk-for-net/tree/master/sdk/keyvault/Azure.Security.KeyVault.Certificates#retrieve-a-certificate
-                                var client = new CertificateClient(vaultUri: new Uri($"https://{Configuration["KeyVaultName"]}.vault.azure.net/"),
-                                        credential: new DefaultAzureCredential());
-
-                                var certResponse = client.GetCertificate(keyVaultCertName);
-                                if (certResponse != null && certResponse.Value != null)
-                                {
-                                    X509Certificate2 cert = new X509Certificate2(certResponse.Value.Cer);
-                                    Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {cert.FriendlyName}.");
-                                    listenOptions.ServerCertificate = cert;
-                                }
-                            });
-                        });
-                    }
-
+                    ConfigureHttps(webBuilder);
+                    webBuilder.ConfigureKestrel(options => options.UseSystemd());
                     webBuilder.UseStartup<Startup>();
                 });
 
         public static string GetVersion() => $"v{Assembly.GetExecutingAssembly().GetName().Version}";
+
+        /// <summary>
+        /// Configures the Kestrel HTTPS end point. The mechanism is:
+        /// - Get the port from appSettings to allow for easy changing,
+        /// - Get the certificate from the Azure Key Vault to allow for centralisation and sharing
+        ///   amongst mutliple virtual machines.
+        /// </summary>
+        private static void ConfigureHttps(IWebHostBuilder webBuilder)
+        {
+            var keyVaultName = Configuration[ConfigKeys.KEY_VAULT_NAME];
+            var keyVaultCertName = Configuration[ConfigKeys.KEY_VAULT_HTTPS_CERTIFICATE_NAME];
+            Uri vaultUri = new Uri($"https://{keyVaultName}.vault.azure.net/");
+
+            var cred = new DefaultAzureCredential();
+
+            if (!string.IsNullOrWhiteSpace(keyVaultCertName))
+            {
+                webBuilder.ConfigureKestrel(serverOptions =>
+                {
+                    serverOptions.ConfigureHttpsDefaults(listenOptions =>
+                    {
+                        var client = new CertificateClient(vaultUri: vaultUri, credential: cred);
+
+                        var certResponse = client.GetCertificate(keyVaultCertName);
+                        if (certResponse != null && certResponse.Value != null)
+                        {
+                            string secretName = certResponse.Value.SecretId.Segments[2].TrimEnd('/');
+                            SecretClient secretClient = new SecretClient(vaultUri, cred);
+                            KeyVaultSecret secret = secretClient.GetSecret(secretName);
+
+                            byte[] pfx = Convert.FromBase64String(secret.Value);
+                            X509Certificate2 cert = new X509Certificate2(pfx);
+
+                            Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {cert.Subject}, has private key {cert.HasPrivateKey}.");
+                            listenOptions.ServerCertificate = cert;
+                        }
+                    });
+                });
+            }
+            else
+            {
+                webBuilder.ConfigureKestrel(serverOptions =>
+                {
+                    // TODO: Disable HTPS end point.
+                    Log.Logger.Warning($"HTTP end point disabled as no {ConfigKeys.KEY_VAULT_HTTPS_CERTIFICATE_NAME} configuration setting was available.");
+                });
+            }
+        }
     }
 }

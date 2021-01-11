@@ -49,15 +49,15 @@ namespace devcall
             services.AddDbContext<SIPAssetsDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
 
-            services.AddSingleton(typeof(SIPHostedService));
-            services.AddHostedService<SIPHostedService>();
+            //services.AddSingleton(typeof(SIPHostedService));
+            //services.AddHostedService<SIPHostedService>();
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
             );
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "demo", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "devcall", Version = "v1" });
             });
         }
 
@@ -88,7 +88,7 @@ namespace devcall
                 endpoints.MapControllers();
                 endpoints.MapGet("/", async context =>
                 {
-                    await context.Response.WriteAsync("Hello World!");
+                    await context.Response.WriteAsync("devcall");
                 });
                 endpoints.MapGet("/version", async context =>
                 {
