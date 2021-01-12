@@ -1,0 +1,73 @@
+﻿@model devcall.DataAccess.SIPAccount
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+@if (!string.IsNullOrWhiteSpace(TempData["Error"] as string))
+{
+    <div class="alert alert-danger" role="alert">
+        @TempData["Error"]
+    </div>
+}
+
+
+@if (!string.IsNullOrWhiteSpace(TempData["Success"] as string))
+{
+    <div class="alert alert-success" role="alert">
+        @TempData["Success"]
+    </div>
+}
+
+@if (Model == null)
+{
+    <p>
+        <a asp-action="Create">Create SIP Account</a>, your account will be <b>sip:@User.Identity.Name@@@ViewData["SIPDefaultDomain"]</b>.
+    </p>
+}
+else
+{
+<p>
+    SIP Bindings for <b>sip:@Model.SIPUsername@@@Model.SIPDomain</b>:
+</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    Contact URI
+                </th>
+                <th>
+                    Expiry (s)
+                </th>
+                <th>
+                    Last Update
+                </th>
+                <th>
+                    Expiry Time
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.SIPRegistrarBindings)
+            {
+                <tr>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.ContactURI)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.Expiry)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.LastUpdate)
+                    </td>
+                    <td>
+                        @Html.DisplayFor(modelItem => item.ExpiryTime)
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

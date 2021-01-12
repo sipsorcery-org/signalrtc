@@ -29,26 +29,13 @@ using Serilog.Extensions.Logging;
 
 namespace devcall
 {
-    /// <summary>
-    /// Convenience class to hold the keys that are used to get configuration settings from
-    /// the appSettings files and elsewhere.
-    /// </summary>
-    public static class ConfigKeys
-    {
-        /// <summary>
-        /// The Azure key vault to load secrets and certificates from.
-        /// </summary>
-        public const string KEY_VAULT_NAME = "KeyVaultName";
-
-        /// <summary>
-        /// The name of the certificate in the Azure Key Vault to use for the HTTPS
-        /// end point.
-        /// </summary>
-        public const string KEY_VAULT_HTTPS_CERTIFICATE_NAME = "KeyVaultHttpsCertificateName";
-    }
-
     public class Program
     {
+        /// <summary>
+        /// Optional TLS certificate that will be used for web and SIP connections.
+        /// </summary>
+        public static X509Certificate2 TlsCertificate { get; private set; }
+
         // This configuration instnaces is made advailable early solely for the logging configuration.
         // It can be removed if the Serilog logger is configured programatically only.
         public static IConfiguration Configuration { get; } = new ConfigurationBuilder()
@@ -92,6 +79,22 @@ namespace devcall
                                                                  new DefaultAzureCredential());
                         config.AddAzureKeyVault(secretClient, new KeyVaultSecretManager());
                     }
+
+                    var keyVaultCertName = Configuration[ConfigKeys.KEY_VAULT_HTTPS_CERTIFICATE_NAME];
+                    if (!string.IsNullOrEmpty(keyVaultCertName))
+                    {
+                        TlsCertificate = GetCertificateFromKeyVault(keyVaultCertName);
+                    }
+                    else
+                    {
+                        var certificatePath = Configuration[ConfigKeys.HTTPS_CERTIFICATE_PATH];
+                        if (!string.IsNullOrEmpty(certificatePath) && File.Exists(certificatePath))
+                        {
+                            TlsCertificate = new X509Certificate2(certificatePath);
+                            Log.Logger.Debug($"Successfully loaded TLS certificate from {certificatePath}, Common Name {TlsCertificate.Subject}," +
+                            $" has private key {TlsCertificate.HasPrivateKey}.");
+                        }
+                    }
                 })
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
@@ -110,43 +113,41 @@ namespace devcall
         /// </summary>
         private static void ConfigureHttps(IWebHostBuilder webBuilder)
         {
-            var keyVaultName = Configuration[ConfigKeys.KEY_VAULT_NAME];
-            var keyVaultCertName = Configuration[ConfigKeys.KEY_VAULT_HTTPS_CERTIFICATE_NAME];
-            Uri vaultUri = new Uri($"https://{keyVaultName}.vault.azure.net/");
-
-            var cred = new DefaultAzureCredential();
-
-            if (!string.IsNullOrWhiteSpace(keyVaultCertName))
+            webBuilder.ConfigureKestrel(serverOptions =>
             {
-                webBuilder.ConfigureKestrel(serverOptions =>
+                if (TlsCertificate != null)
                 {
                     serverOptions.ConfigureHttpsDefaults(listenOptions =>
                     {
-                        var client = new CertificateClient(vaultUri: vaultUri, credential: cred);
-
-                        var certResponse = client.GetCertificate(keyVaultCertName);
-                        if (certResponse != null && certResponse.Value != null)
-                        {
-                            string secretName = certResponse.Value.SecretId.Segments[2].TrimEnd('/');
-                            SecretClient secretClient = new SecretClient(vaultUri, cred);
-                            KeyVaultSecret secret = secretClient.GetSecret(secretName);
-
-                            byte[] pfx = Convert.FromBase64String(secret.Value);
-                            X509Certificate2 cert = new X509Certificate2(pfx);
-
-                            Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {cert.Subject}, has private key {cert.HasPrivateKey}.");
-                            listenOptions.ServerCertificate = cert;
-                        }
+                        Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {TlsCertificate.Subject}," +
+                            $" has private key {TlsCertificate.HasPrivateKey}.");
+                        listenOptions.ServerCertificate = TlsCertificate;
                     });
-                });
+                }
+            });
+        }
+
+        private static X509Certificate2 GetCertificateFromKeyVault(string keyVaultCertName)
+        {
+            var keyVaultName = Configuration[ConfigKeys.KEY_VAULT_NAME];
+            Uri vaultUri = new Uri($"https://{keyVaultName}.vault.azure.net/");
+            var cred = new DefaultAzureCredential();
+
+            var client = new CertificateClient(vaultUri: vaultUri, credential: cred);
+
+            var certResponse = client.GetCertificate(keyVaultCertName);
+            if (certResponse != null && certResponse.Value != null)
+            {
+                string secretName = certResponse.Value.SecretId.Segments[2].TrimEnd('/');
+                SecretClient secretClient = new SecretClient(vaultUri, cred);
+                KeyVaultSecret secret = secretClient.GetSecret(secretName);
+
+                byte[] pfx = Convert.FromBase64String(secret.Value);
+                return new X509Certificate2(pfx);
             }
             else
             {
-                webBuilder.ConfigureKestrel(serverOptions =>
-                {
-                    // TODO: Disable HTPS end point.
-                    Log.Logger.Warning($"HTTP end point disabled as no {ConfigKeys.KEY_VAULT_HTTPS_CERTIFICATE_NAME} configuration setting was available.");
-                });
+                return null;
             }
         }
     }

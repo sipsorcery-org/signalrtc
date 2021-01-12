@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------
 
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -29,6 +30,8 @@ namespace devcall
 {
     public class Startup
     {
+        public const string COOKIE_SCHEME = "devcall";
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -49,8 +52,23 @@ namespace devcall
             services.AddDbContext<SIPAssetsDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
 
+            services.AddDistributedSqlServerCache(opts => {
+                opts.ConnectionString = Configuration.GetConnectionString("SIPAssets");
+                opts.SchemaName = "dbo";
+                opts.TableName = "SessionCache";
+            });
+
+            services.AddSession(options =>
+            {
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+                options.Cookie.Name = ".devcall.session";
+            });
+
+            services.AddSingleton(Program.TlsCertificate);
             services.AddSingleton(typeof(SIPHostedService));
             services.AddHostedService<SIPHostedService>();
+
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
                 options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
@@ -59,6 +77,16 @@ namespace devcall
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "devcall", Version = "v1" });
             });
+
+            services.AddControllersWithViews();
+            services.AddMvc();
+
+            services.AddAuthentication(COOKIE_SCHEME) // Sets the default scheme to cookies
+                .AddCookie(COOKIE_SCHEME, options =>
+                {
+                    options.AccessDeniedPath = "/home/index";
+                    options.LoginPath = "/home/index";
+                });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -67,33 +95,29 @@ namespace devcall
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "demo v1"));
             }
 
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "demo v1"));
-            
-            // Using the welcome page breaks the API routes.
-            //app.UseWelcomePage();
-
-            //app.UseHttpsRedirection();
-
+            app.UseHttpsRedirection();
             app.UseRouting();
-
             app.UseStaticFiles();
-
-            //app.UseAuthorization();
+            app.UseSession();
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
-                endpoints.MapGet("/", async context =>
-                {
-                    await context.Response.WriteAsync("devcall");
-                });
                 endpoints.MapGet("/version", async context =>
                 {
                     await context.Response.WriteAsync(Program.GetVersion());
                 });
+
+                endpoints.MapControllers();
+
+                endpoints.MapControllerRoute(
+                   name: "default",
+                   pattern: "{controller=Home}/{action=Index}/{id?}");
             });
 
             SIPSorcery.LogFactory.Set(app.ApplicationServices.GetService<ILoggerFactory>());

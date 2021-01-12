@@ -5,10 +5,17 @@
     <UserSecretsId>d741701b-eaeb-4734-8ee0-2966a1405fd4</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
-    <RootNamespace>demo</RootNamespace>
+    <RootNamespace>devcall</RootNamespace>
     <AssemblyVersion>0.0.6.0</AssemblyVersion>
     <Version>0.0.6</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Controllers\api\**" />
+    <Content Remove="Controllers\api\**" />
+    <EmbeddedResource Remove="Controllers\api\**" />
+    <None Remove="Controllers\api\**" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="SIPServers\SIPDomainManager.cs" />
@@ -34,29 +41,31 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.1" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="5.0.1">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.SqlServer" Version="5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.AzureAppServices" Version="5.0.1" />
     <PackageReference Include="Microsoft.Identity.Client" Version="4.24.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.10.9" />
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="5.0.1" />
     <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.22" />
+    <PackageReference Include="Octokit" Version="0.48.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
     <PackageReference Include="SIPSorcery" Version="5.0.8-pre" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="certs\localhost.pfx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="isalive.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

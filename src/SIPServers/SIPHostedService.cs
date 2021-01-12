@@ -44,6 +44,7 @@ namespace devcall
 
         private readonly ILogger<SIPHostedService> _logger;
         private readonly IConfiguration _config;
+        private readonly X509Certificate2 _tlsCertificate;
 
         private SIPTransport _sipTransport;
         private SIPDialPlanManager _sipDialPlan;
@@ -56,10 +57,12 @@ namespace devcall
         public SIPHostedService(
             ILogger<SIPHostedService> logger,
             IConfiguration config,
-            IDbContextFactory<SIPAssetsDbContext> dbContextFactory)
+            IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
+            X509Certificate2 tlsCertificate)
         {
             _logger = logger;
             _config = config;
+            _tlsCertificate = tlsCertificate;
 
             _sipTransport = new SIPTransport();
 
@@ -84,8 +87,8 @@ namespace devcall
             _logger.LogDebug("SIP hosted service starting...");
 
             // Get application config settings.
-            int listenPort = _config.GetValue<int>("SIPListenPort", DEFAULT_SIP_LISTEN_PORT);
-            string publicIPAddress = _config.GetValue<string>("SIPPublicIPAddress", null);
+            int listenPort = _config.GetValue<int>(ConfigKeys.SIP_LISTEN_PORT, DEFAULT_SIP_LISTEN_PORT);
+            string publicIPAddress = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_IPADDRESS, null);
 
             if(IPAddress.TryParse(publicIPAddress, out var ipAddr))
             {
@@ -93,11 +96,9 @@ namespace devcall
                 _logger.LogInformation($"SIP transport contact address set to {_sipTransport.ContactHost}.");
             }
 
-            string sipsCertificatePath = _config.GetValue<string>("SIPSCertificate", null);
-            if(!string.IsNullOrWhiteSpace(sipsCertificatePath) && File.Exists(sipsCertificatePath))
+            if(_tlsCertificate != null)
             {
-                var cert = new X509Certificate2(sipsCertificatePath);
-                _sipTransport.AddSIPChannel(new SIPTLSChannel(cert, new IPEndPoint(IPAddress.Any, DEFAULT_SIPS_LISTEN_PORT)));
+                _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, DEFAULT_SIPS_LISTEN_PORT)));
             }
 
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
@@ -197,7 +198,7 @@ namespace devcall
                 }
                 else
                 {
-                    _logger.LogDebug(req.ToString());
+                    _logger.LogTrace(req.ToString());
                 }
             };
 
@@ -211,7 +212,7 @@ namespace devcall
                 }
                 else
                 {
-                    _logger.LogDebug(req.ToString());
+                    _logger.LogTrace(req.ToString());
                 }
             };
 
@@ -225,7 +226,7 @@ namespace devcall
                 }
                 else
                 {
-                    _logger.LogDebug(resp.ToString());
+                    _logger.LogTrace(resp.ToString());
                 }
             };
 
@@ -239,7 +240,7 @@ namespace devcall
                 }
                 else
                 {
-                    _logger.LogDebug(resp.ToString());
+                    _logger.LogTrace(resp.ToString());
                 }
             };
 

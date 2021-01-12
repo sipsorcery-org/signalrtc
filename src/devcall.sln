@@ -7,6 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "devcall", "devcall.csproj",
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{7FEA4349-A256-4BA1-9113-1EF665307009}"
 	ProjectSection(SolutionItems) = preProject
+		..\docs\README.API.txt = ..\docs\README.API.txt
 		..\docs\README.EFCore.txt = ..\docs\README.EFCore.txt
 		..\docs\README.Kestrel.txt = ..\docs\README.Kestrel.txt
 		..\docs\README.UserTesting.txt = ..\docs\README.UserTesting.txt
