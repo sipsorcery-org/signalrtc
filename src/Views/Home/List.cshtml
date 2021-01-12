@@ -29,9 +29,9 @@
 }
 else
 {
-<p>
-    SIP Bindings for <b>sip:@Model.SIPUsername@@@Model.SIPDomain</b>:
-</p>
+    <p>
+        SIP Bindings for <b>sip:@Model.SIPUsername@@@Model.SIPDomain</b>:
+    </p>
 
     <table class="table">
         <thead>
@@ -43,10 +43,13 @@ else
                     Expiry (s)
                 </th>
                 <th>
-                    Last Update
+                    User Agent
                 </th>
                 <th>
-                    Expiry Time
+                    Last Update (UTC)
+                </th>
+                <th>
+                    Expiry Time (UTC)
                 </th>
             </tr>
         </thead>
@@ -61,6 +64,9 @@ else
                         @Html.DisplayFor(modelItem => item.Expiry)
                     </td>
                     <td>
+                        @Html.DisplayFor(modelItem => item.UserAgent)
+                    </td>
+                    <td>
                         @Html.DisplayFor(modelItem => item.LastUpdate)
                     </td>
                     <td>
@@ -70,4 +76,8 @@ else
             }
         </tbody>
     </table>
+
+    <a asp-action="Edit">Reset Password</a> 
+    <span>|</span> 
+    <a asp-action="Delete" onclick="return confirm('Do you want to delete your SIP Account?')">Delete SIP Account</a>
 }

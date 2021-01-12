@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -31,8 +30,8 @@ namespace demo.Controllers
         private readonly string _githubClientSecret;
 
         public HomeController(
-            IDbContextFactory<SIPAssetsDbContext> dbContextFactory, 
-            IConfiguration config, 
+            IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
+            IConfiguration config,
             ILogger<HomeController> logger)
         {
             _config = config;
@@ -65,11 +64,6 @@ namespace demo.Controllers
             return RedirectToAction("Index");
         }
 
-        //public IActionResult Error()
-        //{
-        //    return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        //}
-
         public IActionResult Login()
         {
             //string csrf = Membership.GeneratePassword(24, 1);
@@ -89,13 +83,6 @@ namespace demo.Controllers
             _logger.LogDebug($"Redirecting to {oauthLoginUrl}.");
 
             return Redirect(oauthLoginUrl.ToString());
-
-            //var user = await github.User.Current();
-
-            //_logger.LogDebug($"Current user is {user.Login}.");
-
-            //var sIPAssetsDbContext = _context.SIPAccounts.Include(s => s.Domain).Include(s => s.SIPDialPlan);
-            //return View(await sIPAssetsDbContext.ToListAsync());
         }
 
         public async Task<ActionResult> Authorize(string code, string state)
@@ -135,10 +122,7 @@ namespace demo.Controllers
 
                 await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies", "user", "role")));
 
-                //Session["OAuthToken"] = token.AccessToken;
-
                 return RedirectToAction("List");
-                //}
             }
         }
 
@@ -146,7 +130,7 @@ namespace demo.Controllers
         public async Task<IActionResult> List()
         {
             ViewData["SIPDefaultDomain"] = _sipDefaultDomain;
-            var sipAccount = await _sipAccountDataLayer.GetSIPAccountWithBindings(User.Identity.Name, _sipDefaultDomain);
+            var sipAccount = await _sipAccountDataLayer.GetSIPAccount(User.Identity.Name, _sipDefaultDomain, true);
             return View(sipAccount);
         }
 
@@ -156,28 +140,93 @@ namespace demo.Controllers
             // Check if the SIP account already exists for this user.
             if (await _sipAccountDataLayer.Exists(User.Identity.Name))
             {
-                TempData["Error"] = $"SIP account with username {User.Identity.Name} already exists.";
+                TempData["Error"] = $"SIP account sip:{User.Identity.Name}@{_sipDefaultDomain} already exists.";
                 return RedirectToAction(nameof(List));
             }
             else
             {
-                _logger.LogInformation($"Attempting to create new SIP account for {User.Identity.Name}@{_sipDefaultDomain}.");
-                await _sipAccountDataLayer.Create(User.Identity.Name, _sipDefaultDomain, "password");
-                TempData["Success"] = $"SIP account successfully created for username {User.Identity.Name}@{_sipDefaultDomain}.";
-                return RedirectToAction(nameof(List));
+                var sipAccount = new SIPAccount
+                {
+                    Domain = new SIPDomain { Domain = _sipDefaultDomain },
+                    SIPUsername = User.Identity.Name
+                };
+
+                return View(sipAccount);
             }
         }
 
-        // POST: SIPAccounts/Delete/5
-        //[HttpPost, ActionName("Delete")]
-        //[ValidateAntiForgeryToken]
-        //[Authorize]
-        //public async Task<IActionResult> Delete(Guid id)
-        //{
-        //    var sIPAccount = await _context.SIPAccounts.FindAsync(id);
-        //    _context.SIPAccounts.Remove(sIPAccount);
-        //    await _context.SaveChangesAsync();
-        //    return RedirectToAction(nameof(List));
-        //}
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Create([Bind("SIPPassword")] SIPAccount sipAccount)
+        {
+            if (ModelState.IsValid)
+            {
+                _logger.LogInformation($"Attempting to create new SIP account for {User.Identity.Name}@{_sipDefaultDomain}.");
+                var newAccount = await _sipAccountDataLayer.Create(User.Identity.Name, _sipDefaultDomain, "password");
+                TempData["Success"] = $"SIP account successfully created for username {newAccount.AOR}.";
+                return RedirectToAction(nameof(List));
+            }
+            else
+            {
+                var presetSIPAccount = new SIPAccount
+                {
+                    Domain = new SIPDomain { Domain = _sipDefaultDomain },
+                    SIPUsername = User.Identity.Name,
+                    SIPPassword = sipAccount.SIPPassword
+                };
+                return View(sipAccount);
+            }
+        }
+
+        [Authorize]
+        public async Task<IActionResult> Edit()
+        {
+            var sipAccount = await _sipAccountDataLayer.GetSIPAccount(User.Identity.Name, _sipDefaultDomain);
+
+            if (sipAccount == null)
+            {
+                return NotFound();
+            }
+            else
+            {
+                // Don't show existing password (even though it's already hashed).
+                var presetSIPAccount = new SIPAccount
+                {
+                    Domain = new SIPDomain { Domain = _sipDefaultDomain },
+                    SIPUsername = User.Identity.Name,
+                };
+
+                return View(presetSIPAccount);
+            }
+        }
+
+        /// <summary>
+        /// The only field that can currently be updated is the password.
+        /// </summary>
+        [Authorize]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit([Bind("SIPPassword")] SIPAccount sipAccount)
+        {
+            if (ModelState.IsValid)
+            {
+                await _sipAccountDataLayer.UpdatePassword(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword);
+                return RedirectToAction(nameof(List));
+            }
+            else
+            {
+                var presetSIPAccount = await _sipAccountDataLayer.GetSIPAccount(User.Identity.Name, _sipDefaultDomain);
+                presetSIPAccount.SIPPassword = sipAccount.SIPPassword;
+                return View(presetSIPAccount);
+            }
+        }
+
+        [Authorize]
+        public async Task<IActionResult> Delete()
+        {
+            await _sipAccountDataLayer.Delete(User.Identity.Name, _sipDefaultDomain);
+            return RedirectToAction(nameof(List));
+        }
     }
 }

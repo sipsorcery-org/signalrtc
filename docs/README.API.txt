@@ -5,6 +5,7 @@ https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/api-management/
 https://github.com/octokit/octokit.net/blob/main/docs/oauth-flow.md
 
 dotnet user-secrets set GitHub:ClientSecret "secret"
+Import into Azure Key Store GitHub--ClientSecret "secret"
 
 ==> Web API URLs
 https://localhost:5001/swagger/index.html

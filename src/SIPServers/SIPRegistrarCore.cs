@@ -261,7 +261,7 @@ namespace devcall
                 }
                 else
                 {
-                    SIPAccount sipAccount = m_sipAccountsDataLayer.GetSIPAccount(toUser, canonicalDomain);
+                    SIPAccount sipAccount = m_sipAccountsDataLayer.GetSIPAccount(toUser, canonicalDomain).Result;
 
                     if (sipAccount == null)
                     {

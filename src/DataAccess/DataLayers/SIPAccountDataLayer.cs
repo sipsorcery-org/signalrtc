@@ -29,7 +29,7 @@ namespace devcall.DataAccess
             _dbContextFactory = dbContextFactory;
         }
 
-        public SIPAccount GetSIPAccount(string username, string domain)
+        public async Task<SIPAccount> GetSIPAccount(string username, string domain, bool includeBindings = false)
         {
             if (string.IsNullOrEmpty(username))
             {
@@ -42,40 +42,26 @@ namespace devcall.DataAccess
 
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                SIPAccount sipAccount = db.SIPAccounts.Include(x => x.Domain).Where(x => x.SIPUsername.ToLower() == username.ToLower() &&
-                                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefault();
-                if (sipAccount == null)
+                var query = db.SIPAccounts.Include(x => x.Domain).AsQueryable();
+                if(includeBindings)
                 {
-                    // A full lookup failed. Now try a partial lookup if the incoming username is in a dotted domain name format.
-                    if (username.Contains("."))
-                    {
-                        string usernameSuffix = username.Substring(username.LastIndexOf(".") + 1);
-                        sipAccount = db.SIPAccounts.Include(x => x.Domain).Where(x => x.SIPUsername.ToLower() == usernameSuffix.ToLower() &&
-                                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefault();
-                    }
+                    query = query.Include(y => y.SIPRegistrarBindings);
                 }
 
+                SIPAccount sipAccount = await query.Where(x => x.SIPUsername.ToLower() == username.ToLower() &&
+                                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefaultAsync();
+                //if (sipAccount == null)
+                //{
+                //    // A full lookup failed. Now try a partial lookup if the incoming username is in a dotted domain name format.
+                //    if (username.Contains("."))
+                //    {
+                //        string usernameSuffix = username.Substring(username.LastIndexOf(".") + 1);
+                //        sipAccount = db.SIPAccounts.Include(x => x.Domain).Where(x => x.SIPUsername.ToLower() == usernameSuffix.ToLower() &&
+                //                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefault();
+                //    }
+                //}
+
                 return sipAccount;
-            }
-        }
-
-        public async Task<SIPAccount> GetSIPAccountWithBindings(string username, string domain)
-        {
-            if (string.IsNullOrEmpty(username))
-            {
-                throw new ArgumentNullException(nameof(username), "The username parameter must be specified for GetSIPAccountWithBindings.");
-            }
-            else if (string.IsNullOrEmpty(domain))
-            {
-                throw new ArgumentNullException(nameof(domain), "The domain parameter must be specified for GetSIPAccountWithBindings.");
-            }
-
-            using (var db = _dbContextFactory.CreateDbContext())
-            {
-                return await db.SIPAccounts.Include(x => x.SIPRegistrarBindings).Include(y => y.Domain)
-                        .Where(x => x.SIPUsername.ToLower() == username.ToLower() &&
-                                    x.Domain.Domain.ToLower() == domain.ToLower())
-                        .SingleOrDefaultAsync();
             }
         }
 
@@ -127,6 +113,51 @@ namespace devcall.DataAccess
             }
 
             return sipAccount;
+        }
+
+        public async Task UpdatePassword(string username, string domain, string password)
+        {
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(password))
+            {
+                throw new ArgumentNullException(nameof(username), "The username, domain and password parameters must be specified when updating a SIP Account password.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(domain))
+            {
+                using (var db = _dbContextFactory.CreateDbContext())
+                {
+                    SIPAccount sipAccount = await db.SIPAccounts.Where(x => x.SIPUsername.ToLower() == username.ToLower() &&
+                                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefaultAsync();
+
+                    if (sipAccount == null)
+                    {
+                        throw new ApplicationException($"The SIP account for {username} and {domain} could not be found when attempting a password update.");
+                    }
+                    else
+                    {
+                        sipAccount.SIPPassword = password;
+                        await db.SaveChangesAsync();
+                    }
+                }
+            }
+        }
+
+        public async Task Delete(string username, string domain)
+        {
+            if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(domain))
+            {
+                using (var db = _dbContextFactory.CreateDbContext())
+                {
+                    SIPAccount sipAccount = await db.SIPAccounts.Where(x => x.SIPUsername.ToLower() == username.ToLower() &&
+                                                               x.Domain.Domain.ToLower() == domain.ToLower()).SingleOrDefaultAsync();
+
+                    if(sipAccount != null)
+                    {
+                        db.SIPAccounts.Remove(sipAccount);
+                        await db.SaveChangesAsync();
+                    }
+                }
+            }
         }
     }
 }
