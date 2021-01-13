@@ -18,6 +18,8 @@ namespace demo.Controllers
 {
     public class HomeController : Controller
     {
+        private const string SESSION_CSRF_KEY = "CSRF:State";
+
         private readonly string _sipDefaultDomain;
 
         private readonly SIPAccountDataLayer _sipAccountDataLayer;
@@ -49,7 +51,7 @@ namespace demo.Controllers
         {
             if (HttpContext.User?.Identity?.IsAuthenticated == true)
             {
-                return RedirectToAction("List");
+                return RedirectToAction(nameof(Account));
             }
             else
             {
@@ -61,13 +63,14 @@ namespace demo.Controllers
         {
             await HttpContext.SignOutAsync();
             HttpContext.Session.Clear();
-            return RedirectToAction("Index");
+            return RedirectToAction(nameof(Index));
         }
 
         public IActionResult Login()
         {
-            //string csrf = Membership.GeneratePassword(24, 1);
-            //Session["CSRF:State"] = csrf;
+            // Protect the authorize callback against CSRF.
+            string csrf = Guid.NewGuid().ToString();
+            HttpContext.Session.SetString(SESSION_CSRF_KEY, csrf);
 
             string callbackUrl = this.Url.ActionLink("Authorize", "Home");
             _logger.LogDebug($"GitHub OAuth callback URL: {callbackUrl}.");
@@ -75,7 +78,8 @@ namespace demo.Controllers
             var client = new GitHubClient(new ProductHeaderValue(_githubAppName));
             var request = new OauthLoginRequest(_githubClientID)
             {
-                RedirectUri = new Uri(callbackUrl)
+                RedirectUri = new Uri(callbackUrl),
+                State = csrf
             };
 
             var oauthLoginUrl = client.Oauth.GetGitHubLoginUrl(request);
@@ -89,45 +93,46 @@ namespace demo.Controllers
         {
             if (String.IsNullOrEmpty(code))
             {
-                return RedirectToAction("Login");
+                return RedirectToAction("Index");
             }
             else
             {
-                //var expectedState = HttpContext.Session.GetString("CSRF:State");
-                //if (state != expectedState)
-                //{
-                //    _logger.LogWarning($"Authentication failure, callback state did not match exepcted value.");
-
-                //    return RedirectToAction("Login");
-                //}
-                //else
-                //{
-                //    HttpContext.Session.SetString("CSRF:State", null);
-
-                var client = new GitHubClient(new ProductHeaderValue(_githubAppName));
-                var request = new OauthTokenRequest(_githubClientID, _githubClientSecret, code);
-                var token = await client.Oauth.CreateAccessToken(request);
-
-                client.Credentials = new Credentials(token.AccessToken);
-
-                var user = await client.User.Current();
-
-                _logger.LogDebug($"GitHub authenticated user ID: {user.Id}.");
-
-                var claims = new List<Claim>
+                var csrf = HttpContext.Session.GetString(SESSION_CSRF_KEY);
+                if (state != csrf)
                 {
-                    new Claim("user", user.Id.ToString()),
-                    new Claim("role", "Member")
-                };
+                    _logger.LogWarning($"Authentication failure, callback state did not match session CSRF token.");
+                    TempData["Error"] = "Authentication failure due to incorrect CSRF token.";
+                    return RedirectToAction(nameof(Index));
+                }
+                else
+                {
+                    HttpContext.Session.Remove(SESSION_CSRF_KEY);
 
-                await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies", "user", "role")));
+                    var client = new GitHubClient(new ProductHeaderValue(_githubAppName));
+                    var request = new OauthTokenRequest(_githubClientID, _githubClientSecret, code);
+                    var token = await client.Oauth.CreateAccessToken(request);
 
-                return RedirectToAction("List");
+                    client.Credentials = new Credentials(token.AccessToken);
+
+                    var user = await client.User.Current();
+
+                    _logger.LogDebug($"GitHub authenticated user ID: {user.Id}.");
+
+                    var claims = new List<Claim>
+                    {
+                        new Claim("user", user.Id.ToString()),
+                        new Claim("role", "Member")
+                    };
+
+                    await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies", "user", "role")));
+
+                    return RedirectToAction(nameof(Account));
+                }
             }
         }
 
         [Authorize]
-        public async Task<IActionResult> List()
+        public async Task<IActionResult> Account()
         {
             ViewData["SIPDefaultDomain"] = _sipDefaultDomain;
             var sipAccount = await _sipAccountDataLayer.GetSIPAccount(User.Identity.Name, _sipDefaultDomain, true);
@@ -141,7 +146,7 @@ namespace demo.Controllers
             if (await _sipAccountDataLayer.Exists(User.Identity.Name))
             {
                 TempData["Error"] = $"SIP account sip:{User.Identity.Name}@{_sipDefaultDomain} already exists.";
-                return RedirectToAction(nameof(List));
+                return RedirectToAction(nameof(Account));
             }
             else
             {
@@ -165,7 +170,7 @@ namespace demo.Controllers
                 _logger.LogInformation($"Attempting to create new SIP account for {User.Identity.Name}@{_sipDefaultDomain}.");
                 var newAccount = await _sipAccountDataLayer.Create(User.Identity.Name, _sipDefaultDomain, "password");
                 TempData["Success"] = $"SIP account successfully created for username {newAccount.AOR}.";
-                return RedirectToAction(nameof(List));
+                return RedirectToAction(nameof(Account));
             }
             else
             {
@@ -212,7 +217,7 @@ namespace demo.Controllers
             if (ModelState.IsValid)
             {
                 await _sipAccountDataLayer.UpdatePassword(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword);
-                return RedirectToAction(nameof(List));
+                return RedirectToAction(nameof(Account));
             }
             else
             {
@@ -226,7 +231,7 @@ namespace demo.Controllers
         public async Task<IActionResult> Delete()
         {
             await _sipAccountDataLayer.Delete(User.Identity.Name, _sipDefaultDomain);
-            return RedirectToAction(nameof(List));
+            return RedirectToAction(nameof(Account));
         }
     }
 }

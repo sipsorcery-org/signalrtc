@@ -2,6 +2,21 @@
     ViewData["Title"] = "Home";
 }
 
+@if (!string.IsNullOrWhiteSpace(TempData["Error"] as string))
+{
+    <div class="alert alert-danger" role="alert">
+        @TempData["Error"]
+    </div>
+}
+
+
+@if (!string.IsNullOrWhiteSpace(TempData["Success"] as string))
+{
+    <div class="alert alert-success" role="alert">
+        @TempData["Success"]
+    </div>
+}
+
 <p>Welcome to the Developer Call demonstration application.</p>
 
 <p>Click <a asp-action="Login">Login</a> to Create or Manage your complimentary SIP Account (note that a GitHub account is required to use this demo).</p>
