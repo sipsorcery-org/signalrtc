@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>devcall</RootNamespace>
-    <AssemblyVersion>0.0.6.0</AssemblyVersion>
-    <Version>0.0.6</Version>
+    <AssemblyVersion>0.0.7.0</AssemblyVersion>
+    <Version>0.0.7</Version>
   </PropertyGroup>
 
   <ItemGroup>
