@@ -87,11 +87,9 @@ namespace devcall
         private SIPRegistrarBindingsManager m_registrarBindingsManager;
         private SIPAccountDataLayer m_sipAccountsDataLayer;
         private SIPRegistrarBindingDataLayer m_sipRegistrarBindingDataLayer;
-        private SIPDomainDataLayer m_sipDomainDataLayer;
+        private SIPDomainManager m_sipDomainManager;
 
         private string m_serverAgent = SIPConstants.SIP_USERAGENT_STRING;
-        private bool m_mangleUACContact = false;            // Whether or not to adjust contact URIs that contain private hosts to the value of the bottom via received socket.
-        private bool m_strictRealmHandling = false;         // If true the registrar will only accept registration requests for domains it is configured for, otherwise any realm is accepted.
         private ConcurrentQueue<SIPNonInviteTransaction> m_registerQueue = new ConcurrentQueue<SIPNonInviteTransaction>();
         private AutoResetEvent m_registerARE = new AutoResetEvent(false);
 
@@ -106,20 +104,17 @@ namespace devcall
 
         public RegistrarCore(
             SIPTransport sipTransport,
-            bool mangleUACContact,
-            bool strictRealmHandling,
             SIPRegistrarBindingsManager registrarBindingsManager,
-            IDbContextFactory<SIPAssetsDbContext> dbContextFactory)
+            IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
+            SIPDomainManager sipDomainManager)
         {
             m_sipTransport = sipTransport;
-            m_mangleUACContact = mangleUACContact;
-            m_strictRealmHandling = strictRealmHandling;
 
             m_sipAccountsDataLayer = new SIPAccountDataLayer(dbContextFactory);
             m_sipRegistrarBindingDataLayer = new SIPRegistrarBindingDataLayer(dbContextFactory);
-            m_sipDomainDataLayer = new SIPDomainDataLayer(dbContextFactory);
 
             m_registrarBindingsManager = registrarBindingsManager;
+            m_sipDomainManager = sipDomainManager;
         }
 
         public void Start(int threadCount)
@@ -249,7 +244,7 @@ namespace devcall
                 SIPURI registerURI = sipRequest.URI;
                 SIPToHeader toHeader = sipRequest.Header.To;
                 string toUser = toHeader.ToURI.User;
-                string canonicalDomain = (!m_strictRealmHandling) ? m_sipDomainDataLayer.GetCanonicalDomain(toHeader.ToURI.Host, true) : toHeader.ToURI.Host;
+                string canonicalDomain = m_sipDomainManager.GetCanonicalDomain(toHeader.ToURI.Host);
                 int requestedExpiry = GetRequestedExpiry(sipRequest);
 
                 if (canonicalDomain == null)

@@ -52,13 +52,16 @@ namespace devcall
         private bool _exit = false;
 
         private SIPTransport _sipTransport;
+        private SIPAccountDataLayer _sipAccountDataLayer;
         private SIPCallManager _sipCallManager;
         private SIPDialPlanManager _sipdialPlan;
+        private SIPDomainManager _sipDomainManager;
 
         public SIPB2BUserAgentCore(
             SIPTransport sipTransport, 
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
-            SIPDialPlanManager sipDialPlan)
+            SIPDialPlanManager sipDialPlan,
+            SIPDomainManager sipDomainManager)
         {
             if(sipTransport == null)
             {
@@ -68,6 +71,8 @@ namespace devcall
             _sipTransport = sipTransport;
             _sipCallManager = new SIPCallManager(_sipTransport, null, dbContextFactory);
             _sipdialPlan = sipDialPlan;
+            _sipDomainManager = sipDomainManager;
+            _sipAccountDataLayer = new SIPAccountDataLayer(dbContextFactory);
         }
 
         public void Start(int threadCount)
@@ -132,7 +137,12 @@ namespace devcall
                         {
                             if (_inviteQueue.TryDequeue(out var uasTransaction))
                             {
-                                Forward(uasTransaction).Wait();
+                                var sipAccount = GetCaller(uasTransaction).Result;
+                                
+                                if (uasTransaction.TransactionFinalResponse == null)
+                                {
+                                    Forward(uasTransaction, sipAccount).Wait();
+                                }
                             }
                         }
                         catch (Exception invExcp)
@@ -154,24 +164,80 @@ namespace devcall
             }
         }
 
-        private async Task Forward(UASInviteTransaction uasTx)
+        /// <summary>
+        /// Attempts to lookup the caller based on the "To" header host. If the host matches a
+        /// hosted domain then an attempt will be made to retrieve the SIP account for the caller.
+        /// If a SIP account is not found for a hosted domain the call is rejected with a 403 response.
+        /// If the host does not match then the caller is treated as a public non-authenticated caller.
+        /// </summary>
+        /// <returns>The caller's SIP account or null for non-hosted domains.</returns>
+        private async Task<ISIPAccount> GetCaller(UASInviteTransaction uasTx)
         {
-            SIPB2BUserAgent b2bua = new SIPB2BUserAgent(_sipTransport, null, uasTx, null);
-            b2bua.CallAnswered += (uac, resp) => ForwardCallAnswered(uac, b2bua);
+            var invReq = uasTx.TransactionRequest;
 
-            var dst = await _sipdialPlan.Lookup(uasTx, null);
-
-            if (dst == null)
+            if (invReq.Header.From == null || invReq.Header.From.FromURI == null)
             {
-                Logger.LogInformation($"B2BUA lookup did not return a destination. Rejecting UAS call.");
-
-                var notFoundResp = SIPResponse.GetResponse(uasTx.TransactionRequest, SIPResponseStatusCodesEnum.NotFound, null);
-                uasTx.SendFinalResponse(notFoundResp);
+                uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.BadRequest, "From header malformed"));
+                return null;
             }
             else
             {
-                Logger.LogInformation($"B2BUA forwarding call to {dst.Uri}.");
-                b2bua.Call(dst);
+                string canonicalDomain = _sipDomainManager.GetCanonicalDomain(invReq.Header.From.FromURI.Host);
+
+                if (canonicalDomain == null)
+                {
+                    // The caller is from a non-hosted domain. Will be treated as a public non-authenticated caller.
+                    return null;
+                }
+                else
+                {
+                    Logger.LogDebug($"B2B incoming caller was for hosted domain {canonicalDomain}, looking up caller for {invReq.Header.From.FromURI.User}.");
+
+                    var sipAccount = await _sipAccountDataLayer.GetSIPAccount(invReq.Header.From.FromURI.User, canonicalDomain);
+                    
+                    if(sipAccount == null)
+                    {
+                        Logger.LogWarning($"B2B no SIP account found for caller {invReq.Header.From.FromURI.User}@{canonicalDomain}, rejecting.");
+                        uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.Forbidden, null));
+                    }
+
+                    return sipAccount;
+                }
+            }
+        }
+
+        private async Task Forward(UASInviteTransaction uasTx, ISIPAccount callerSIPAccount)
+        {
+            var invReq = uasTx.TransactionRequest;
+
+            Logger.LogDebug($"B2B commencing forward for caller {invReq.Header.From.FromURI} to {invReq.URI}.");
+
+            SIPB2BUserAgent b2bua = new SIPB2BUserAgent(_sipTransport, null, uasTx, callerSIPAccount);
+
+            bool isAuthenticated = false;
+            if (callerSIPAccount != null)
+            {
+                isAuthenticated = b2bua.AuthenticateCall();
+            }
+
+            if (callerSIPAccount == null || isAuthenticated == true)
+            {
+                b2bua.CallAnswered += (uac, resp) => ForwardCallAnswered(uac, b2bua);
+
+                var dst = await _sipdialPlan.Lookup(uasTx, null);
+
+                if (dst == null)
+                {
+                    Logger.LogInformation($"B2BUA lookup did not return a destination. Rejecting UAS call.");
+
+                    var notFoundResp = SIPResponse.GetResponse(uasTx.TransactionRequest, SIPResponseStatusCodesEnum.NotFound, null);
+                    uasTx.SendFinalResponse(notFoundResp);
+                }
+                else
+                {
+                    Logger.LogInformation($"B2BUA forwarding call to {dst.Uri}.");
+                    b2bua.Call(dst);
+                }
             }
         }
 

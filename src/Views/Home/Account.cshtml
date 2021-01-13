@@ -46,7 +46,7 @@ else
                     User Agent
                 </th>
                 <th>
-                    Last Update (UTC)
+                    Client Socket
                 </th>
                 <th>
                     Expiry Time (UTC)
@@ -67,7 +67,7 @@ else
                         @Html.DisplayFor(modelItem => item.UserAgent)
                     </td>
                     <td>
-                        @Html.DisplayFor(modelItem => item.LastUpdate)
+                        @Html.DisplayFor(modelItem => item.RemoteSIPSocket)
                     </td>
                     <td>
                         @Html.DisplayFor(modelItem => item.ExpiryTime)

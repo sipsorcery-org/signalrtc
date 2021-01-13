@@ -20,28 +20,36 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using SIPAspNetServer.DataAccess;
+using devcall.DataAccess;
 
-namespace SIPAspNetServer
+namespace devcall
 {
     /// <summary>
     /// This class maintains a list of domains that are being maintained by this process.
     /// </summary>
     public class SIPDomainManager
     {
-        public const string WILDCARD_DOMAIN_ALIAS = "*";
-        public const string DEFAULT_LOCAL_DOMAIN = "local";
-
         private readonly ILogger Logger = SIPSorcery.LogFactory.CreateLogger<SIPDomainManager>();
 
+        private SIPDomainDataLayer _sipDomainDataLayer;
         private Dictionary<string, SIPDomain> m_domains = new Dictionary<string, SIPDomain>();  // Records the domains that are being maintained.
-        private SIPDomain m_wildCardDomain;
 
-        public SIPDomainManager(DbSet<SIPDomain> SIPDomains)
+        public SIPDomainManager(IDbContextFactory<SIPAssetsDbContext> dbContextFactory)
         {
-            if (SIPDomains == null || SIPDomains.Count() == 0)
+            _sipDomainDataLayer = new SIPDomainDataLayer(dbContextFactory);
+        }
+
+        /// <summary>
+        /// Loads the SIP domains from the databsae into an in-memory dictionary for fast lookups.
+        /// </summary>
+        public async Task Load()
+        {
+            var domains = await _sipDomainDataLayer.GetListAsync();
+
+            if (domains == null || domains.Count() == 0)
             {
                 throw new ApplicationException("No SIP domains could be loaded from the database. There needs to be at least one domain.");
             }
@@ -49,36 +57,30 @@ namespace SIPAspNetServer
             {
                 m_domains.Clear();
 
-                foreach (SIPDomain SIPDomain in SIPDomains)
+                foreach (SIPDomain sipDomain in domains)
                 {
-                    AddDomain(SIPDomain);
+                    AddDomain(sipDomain);
                 }
             }
         }
 
-        public void AddDomain(SIPDomain SIPDomain)
+        private void AddDomain(SIPDomain sipDomain)
         {
-            if (SIPDomain == null)
+            if (sipDomain == null)
             {
-                throw new ArgumentException("SIPDomainManager cannot add a null SIPDomain object.");
+                Logger.LogWarning("SIPDomainManager cannot add a null SIPDomain object, ignoring.");
             }
             else
             {
-                if (!m_domains.ContainsKey(SIPDomain.Domain.ToLower()))
+                if (!m_domains.ContainsKey(sipDomain.Domain.ToLower()))
                 {
-                    Logger.LogDebug($"SIPDomainManager added domain: {SIPDomain.Domain} with alias list {SIPDomain.AliasList}.");
+                    Logger.LogDebug($"SIPDomainManager adding domain: {sipDomain.Domain} with alias list {sipDomain.AliasList}.");
 
-                    m_domains.Add(SIPDomain.Domain.ToLower(), SIPDomain);
-                    
-                    if (m_wildCardDomain == null && SIPDomain.Aliases.Contains(WILDCARD_DOMAIN_ALIAS))
-                    {
-                        m_wildCardDomain = SIPDomain;
-                        Logger.LogDebug($"SIPDomainManager wildcard domain set to {SIPDomain.Domain}.");
-                    }
+                    m_domains.Add(sipDomain.Domain.ToLower(), sipDomain);
                 }
                 else
                 {
-                    Logger.LogWarning($"SIPDomainManager ignoring duplicate domain entry for {SIPDomain.Domain.ToLower()}.");
+                    Logger.LogWarning($"SIPDomainManager ignoring duplicate domain entry for {sipDomain.Domain.ToLower()}.");
                 }
             }
         }
@@ -88,13 +90,13 @@ namespace SIPAspNetServer
         /// </summary>
         /// <param name="host">The hostname to check for a serviced domain for.</param>
         /// <returns>The canconical domain name for the host if found or null if not.</returns>
-        public string GetDomain(string host, bool wilcardOk)
+        public string GetCanonicalDomain(string host)
         {
-            SIPDomain domain = GetSIPDomain(host, wilcardOk);
+            SIPDomain domain = GetSIPDomain(host);
             return (domain != null) ? domain.Domain.ToLower() : null;
         }
 
-        private SIPDomain GetSIPDomain(string host, bool wildcardOk)
+        private SIPDomain GetSIPDomain(string host)
         {
             //logger.Debug("SIPDomainManager GetDomain for " + host + ".");
 
@@ -124,14 +126,7 @@ namespace SIPAspNetServer
                         }
                     }
 
-                    if (wildcardOk)
-                    {
-                        return m_wildCardDomain;
-                    }
-                    else
-                    {
-                        return null;
-                    }
+                    return null;
                 }
             }
         }
@@ -141,9 +136,9 @@ namespace SIPAspNetServer
         /// </summary>
         /// <param name="host"></param>
         /// <returns>True if the host is present as a domain or an alias, false otherwise.</returns>
-        public bool HasDomain(string host, bool wildcardOk)
+        public bool HasDomain(string host)
         {
-            return GetDomain(host, wildcardOk) != null;
+            return GetSIPDomain(host) != null;
         }
     }
 }

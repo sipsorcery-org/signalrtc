@@ -14,15 +14,15 @@
 //-----------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace devcall.DataAccess
 {
     public class SIPDomainDataLayer
     {
-        public const string WILDCARD_DOMAIN = "*";
-
         private readonly IDbContextFactory<SIPAssetsDbContext> _dbContextFactory;
 
         public SIPDomainDataLayer(IDbContextFactory<SIPAssetsDbContext> dbContextFactory)
@@ -30,7 +30,7 @@ namespace devcall.DataAccess
             _dbContextFactory = dbContextFactory;
         }
 
-        public string GetCanonicalDomain(string host, bool wildcardOk)
+        public async Task<string> GetCanonicalDomain(string host)
         {
             if (string.IsNullOrEmpty(host))
             {
@@ -42,10 +42,18 @@ namespace devcall.DataAccess
                 SIPDomain sipDomain = db.SIPDomains.Where(x => x.Domain.ToLower() == host.ToLower()).SingleOrDefault();
                 if (sipDomain == null)
                 {
-                    sipDomain = db.SIPDomains.Where(x => x.AliasList.ToLower().Contains(host.ToLower()) || x.AliasList.Contains(WILDCARD_DOMAIN)).FirstOrDefault();
+                    sipDomain = await db.SIPDomains.Where(x => x.AliasList.ToLower().Contains(host.ToLower())).FirstOrDefaultAsync();
                 }
 
                 return sipDomain?.Domain;
+            }
+        }
+
+        public async Task<List<SIPDomain>> GetListAsync()
+        {
+            using (var db = _dbContextFactory.CreateDbContext())
+            {
+                return await db.SIPDomains.ToListAsync();
             }
         }
     }

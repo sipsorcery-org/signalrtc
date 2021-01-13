@@ -53,6 +53,7 @@ namespace devcall
         private SIPB2BUserAgentCore _b2bUserAgentCore;
         private SIPCallManager _sipCallManager;
         private CDRDataLayer _cdrDataLayer;
+        private SIPDomainManager _sipDomainManager;
 
         public SIPHostedService(
             ILogger<SIPHostedService> logger,
@@ -69,10 +70,12 @@ namespace devcall
             // Load dialplan script and make sure it can be compiled.
             _sipDialPlan = new SIPDialPlanManager(dbContextFactory);
             _sipDialPlan.LoadDialPlan();
+            _sipDomainManager = new SIPDomainManager(dbContextFactory);
+            _sipDomainManager.Load().Wait();
 
             _bindingsManager = new SIPRegistrarBindingsManager(new SIPRegistrarBindingDataLayer(dbContextFactory), MAX_REGISTRAR_BINDINGS);
-            _registrarCore = new RegistrarCore(_sipTransport, false, false, _bindingsManager, dbContextFactory);
-            _b2bUserAgentCore = new SIPB2BUserAgentCore(_sipTransport, dbContextFactory, _sipDialPlan);
+            _registrarCore = new RegistrarCore(_sipTransport, _bindingsManager, dbContextFactory, _sipDomainManager);
+            _b2bUserAgentCore = new SIPB2BUserAgentCore(_sipTransport, dbContextFactory, _sipDialPlan, _sipDomainManager);
             _sipCallManager = new SIPCallManager(_sipTransport, null, dbContextFactory);
             _cdrDataLayer = new CDRDataLayer(dbContextFactory);
 
@@ -90,13 +93,13 @@ namespace devcall
             int listenPort = _config.GetValue<int>(ConfigKeys.SIP_LISTEN_PORT, DEFAULT_SIP_LISTEN_PORT);
             string publicIPAddress = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_IPADDRESS, null);
 
-            if(IPAddress.TryParse(publicIPAddress, out var ipAddr))
+            if (IPAddress.TryParse(publicIPAddress, out var ipAddr))
             {
                 _sipTransport.ContactHost = ipAddr.ToString();
                 _logger.LogInformation($"SIP transport contact address set to {_sipTransport.ContactHost}.");
             }
 
-            if(_tlsCertificate != null)
+            if (_tlsCertificate != null)
             {
                 _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, DEFAULT_SIPS_LISTEN_PORT)));
             }
@@ -107,7 +110,7 @@ namespace devcall
             var listeningEP = _sipTransport.GetSIPChannels().First().ListeningSIPEndPoint;
             _logger.LogInformation($"SIP transport listening on {listeningEP}.");
 
-            EnableTraceLogs(_sipTransport, true);
+            EnableTraceLogs(_sipTransport);
 
             _bindingsManager.Start();
             _registrarCore.Start(REGISTRAR_CORE_WORKER_THREADS);
@@ -186,62 +189,30 @@ namespace devcall
         /// <summary>
         /// Enable detailed SIP log messages.
         /// </summary>
-        private void EnableTraceLogs(SIPTransport sipTransport, bool fullSIP)
+        private void EnableTraceLogs(SIPTransport sipTransport)
         {
             sipTransport.SIPRequestInTraceEvent += (localEP, remoteEP, req) =>
             {
-                _logger.LogDebug($"Request received: {localEP}<-{remoteEP}");
-
-                if (!fullSIP)
-                {
-                    _logger.LogDebug(req.StatusLine);
-                }
-                else
-                {
-                    _logger.LogTrace(req.ToString());
-                }
+                _logger.LogDebug($"Request received: {localEP}<-{remoteEP} {req.StatusLine}");
+                _logger.LogTrace(req.ToString());
             };
 
             sipTransport.SIPRequestOutTraceEvent += (localEP, remoteEP, req) =>
             {
-                _logger.LogDebug($"Request sent: {localEP}->{remoteEP}");
-
-                if (!fullSIP)
-                {
-                    _logger.LogDebug(req.StatusLine);
-                }
-                else
-                {
-                    _logger.LogTrace(req.ToString());
-                }
+                _logger.LogDebug($"Request sent: {localEP}->{remoteEP} {req.StatusLine}");
+                _logger.LogTrace(req.ToString());
             };
 
             sipTransport.SIPResponseInTraceEvent += (localEP, remoteEP, resp) =>
             {
-                _logger.LogDebug($"Response received: {localEP}<-{remoteEP}");
-
-                if (!fullSIP)
-                {
-                    _logger.LogDebug(resp.ShortDescription);
-                }
-                else
-                {
-                    _logger.LogTrace(resp.ToString());
-                }
+                _logger.LogDebug($"Response received: {localEP}<-{remoteEP} {resp.ShortDescription}");
+                _logger.LogTrace(resp.ToString());
             };
 
             sipTransport.SIPResponseOutTraceEvent += (localEP, remoteEP, resp) =>
             {
-                _logger.LogDebug($"Response sent: {localEP}->{remoteEP}");
-
-                if (!fullSIP)
-                {
-                    _logger.LogDebug(resp.ShortDescription);
-                }
-                else
-                {
-                    _logger.LogTrace(resp.ToString());
-                }
+                _logger.LogDebug($"Response sent: {localEP}->{remoteEP} {resp.ShortDescription}");
+                _logger.LogTrace(resp.ToString());
             };
 
             sipTransport.SIPRequestRetransmitTraceEvent += (tx, req, count) =>

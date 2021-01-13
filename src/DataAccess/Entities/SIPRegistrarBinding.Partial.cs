@@ -17,7 +17,9 @@
 // ============================================================================
 
 using System;
+using System.Net;
 using SIPSorcery.SIP;
+using SIPSorcery.Sys;
 
 #nullable disable
 
@@ -64,7 +66,6 @@ namespace devcall.DataAccess
             SIPAccountID = sipAccount.ID;
             //sipaccountname = sipAccount.sipusername + "@" + sipAccount.domain.domain;
             ContactURI = bindingURI.ToString();
-            //m_mangledContactURI = m_contactURI.CopyOf();
             CallId = callId;
             CSeq = cseq;
             UserAgent = userAgent;
@@ -77,17 +78,17 @@ namespace devcall.DataAccess
             RegistrarSIPSocket = registrarSIPEndPoint?.ToString();
             LastUpdate = DateTime.UtcNow;
 
-            //if (SIPTransport.IsPrivateAddress(sipRequest.Header.Contact[0].ContactURI.Host) && m_mangleUACContact)
-            //if (!sipAccount.DontMangleEnabled && Regex.Match(m_mangledContactURI.Host, @"(\d+\.){3}\d+").Success)
-            //{
-            //    // The Contact URI Host is used by registrars as the contact socket for the user so it needs to be changed to reflect the socket
-            //    // the intial request was received on in order to work around NAT. It's no good just relying on private addresses as a lot of User Agents
-            //    // determine their public IP but NOT their public port so they send the wrong port in the Contact header.
+            if (IPSocket.IsPrivateAddress(bindingURI.Host) && bindingURI.Host != remoteSIPEndPoint.GetIPEndPoint().ToString())
+            {
+                // The Contact URI Host is used by registrars as the contact socket for the user so it needs to be changed to reflect the socket
+                // the intial request was received on in order to work around NAT. It's no good just relying on private addresses as a lot of User Agents
+                // determine their public IP but NOT their public port so they send the wrong port in the Contact header.
 
-            //    //logger.Debug("Mangling contact header from " + m_mangledContactURI.Host + " to " + IPSocket.GetSocketString(uacRecvdEndPoint) + ".");
-
-            //    m_mangledContactURI.Host = remoteSIPEndPoint.GetIPEndPoint().ToString();
-            //}
+                //logger.Debug("Mangling contact header from " + m_mangledContactURI.Host + " to " + IPSocket.GetSocketString(uacRecvdEndPoint) + ".");
+                var mangledURI = bindingURI.CopyOf();
+                mangledURI.Host = remoteSIPEndPoint.GetIPEndPoint().ToString();
+                MangledContactURI = mangledURI.ToString();
+            }
 
             Expiry = expirySeconds;
 
