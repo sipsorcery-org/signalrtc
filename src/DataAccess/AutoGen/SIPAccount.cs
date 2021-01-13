@@ -17,7 +17,7 @@ namespace devcall.DataAccess
         public Guid DomainID { get; set; }
         public Guid? SIPDialPlanID { get; set; }
         public string SIPUsername { get; set; }
-        public string SIPPassword { get; set; }
+        public string HA1Digest { get; set; }
         public bool IsDisabled { get; set; }
         public DateTime Inserted { get; set; }
 

@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using Octokit;
 using devcall;
 using devcall.DataAccess;
+using SIPSorcery.SIP;
 
 namespace demo.Controllers
 {
@@ -178,7 +179,7 @@ namespace demo.Controllers
                 {
                     Domain = new SIPDomain { Domain = _sipDefaultDomain },
                     SIPUsername = User.Identity.Name,
-                    SIPPassword = sipAccount.SIPPassword
+                    SIPPassword = HTTPDigest.DigestCalcHA1(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword)
                 };
                 return View(sipAccount);
             }
@@ -216,7 +217,8 @@ namespace demo.Controllers
         {
             if (ModelState.IsValid)
             {
-                await _sipAccountDataLayer.UpdatePassword(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword);
+                var passwordHash = HTTPDigest.DigestCalcHA1(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword);
+                await _sipAccountDataLayer.UpdatePassword(User.Identity.Name, _sipDefaultDomain, passwordHash);
                 return RedirectToAction(nameof(Account));
             }
             else

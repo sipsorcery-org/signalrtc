@@ -16,9 +16,9 @@
 // ============================================================================
 
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc;
 using SIPSorcery.SIP.App;
-
 
 #nullable disable
 
@@ -34,6 +34,9 @@ namespace devcall.DataAccess
         /// </summary>
         [Display(Name = "SIP Account Address")]
         public string AOR => SIPUsername + "@" + Domain?.Domain;
+
+        [NotMapped]
+        public string SIPPassword { get; set; }
     }
 
     public class SIPAccountMetadata

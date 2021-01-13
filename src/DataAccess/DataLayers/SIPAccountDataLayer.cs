@@ -81,17 +81,17 @@ namespace devcall.DataAccess
             }
         }
 
-        public async Task<SIPAccount> Create(string username, string domain, string password)
+        public async Task<SIPAccount> Create(string username, string domain, string ha1Digest)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(ha1Digest))
             {
-                throw new ArgumentNullException(nameof(username), "The username, domain and password parameters must be specified when creating a SIP Account.");
+                throw new ArgumentNullException(nameof(username), "The username, domain and digest parameters must be specified when creating a SIP Account.");
             }
 
             SIPAccount sipAccount = new SIPAccount
             {
                 SIPUsername = username,
-                SIPPassword = password
+                HA1Digest = ha1Digest
             };
 
             using (var db = _dbContextFactory.CreateDbContext())
@@ -115,11 +115,11 @@ namespace devcall.DataAccess
             return sipAccount;
         }
 
-        public async Task UpdatePassword(string username, string domain, string password)
+        public async Task UpdatePassword(string username, string domain, string ha1Digest)
         {
-            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(password))
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(domain) || string.IsNullOrWhiteSpace(ha1Digest))
             {
-                throw new ArgumentNullException(nameof(username), "The username, domain and password parameters must be specified when updating a SIP Account password.");
+                throw new ArgumentNullException(nameof(username), "The username, domain and digest parameters must be specified when updating a SIP Account password.");
             }
 
             if (!string.IsNullOrWhiteSpace(username) && !string.IsNullOrWhiteSpace(domain))
@@ -135,7 +135,7 @@ namespace devcall.DataAccess
                     }
                     else
                     {
-                        sipAccount.SIPPassword = password;
+                        sipAccount.HA1Digest = ha1Digest;
                         await db.SaveChangesAsync();
                     }
                 }

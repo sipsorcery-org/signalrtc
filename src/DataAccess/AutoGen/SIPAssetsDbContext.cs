@@ -120,7 +120,7 @@ namespace devcall.DataAccess
                     .HasColumnType("datetime")
                     .HasDefaultValueSql("(sysdatetime())");
 
-                entity.Property(e => e.SIPPassword)
+                entity.Property(e => e.HA1Digest)
                     .IsRequired()
                     .HasMaxLength(32);
 
