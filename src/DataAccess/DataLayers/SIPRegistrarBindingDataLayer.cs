@@ -69,9 +69,8 @@ namespace devcall.DataAccess
             int expiry, 
             SIPEndPoint remoteSIPEndPoint, 
             SIPEndPoint proxySIPEndPoint, 
-            SIPEndPoint registrarSIPEndPoint, 
-            bool dontMangle)
-        {
+            SIPEndPoint registrarSIPEndPoint)
+        { 
             using (var db = _dbContextFactory.CreateDbContext())
             {
                 var existing = db.SIPRegistrarBindings.Where(x => x.ID == id).SingleOrDefault();
@@ -87,6 +86,10 @@ namespace devcall.DataAccess
                 existing.RemoteSIPSocket = remoteSIPEndPoint?.ToString();
                 existing.ProxySIPSocket = proxySIPEndPoint?.ToString();
                 existing.RegistrarSIPSocket = registrarSIPEndPoint?.ToString();
+
+                var mangledURI = SIPURI.ParseSIPURIRelaxed(existing.ContactURI);
+                mangledURI.Host = remoteSIPEndPoint.GetIPEndPoint().ToString();
+                existing.MangledContactURI = mangledURI.ToString();
 
                 db.SaveChanges();
 

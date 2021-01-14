@@ -84,6 +84,8 @@ namespace devcall
                     if (!string.IsNullOrEmpty(keyVaultCertName))
                     {
                         TlsCertificate = GetCertificateFromKeyVault(keyVaultCertName);
+                        Log.Logger.Information($"Certificate successfully loaded from {ConfigKeys.KEY_VAULT_NAME} Azure Key Vault," +
+                            $" Common Name {TlsCertificate.Subject}, has private key {TlsCertificate.HasPrivateKey}.");
                     }
                     else
                     {
@@ -119,8 +121,6 @@ namespace devcall
                 {
                     serverOptions.ConfigureHttpsDefaults(listenOptions =>
                     {
-                        Log.Logger.Information($"Certificate successfully loaded from Azure Key Vault, Common Name {TlsCertificate.Subject}," +
-                            $" has private key {TlsCertificate.HasPrivateKey}.");
                         listenOptions.ServerCertificate = TlsCertificate;
                     });
                 }

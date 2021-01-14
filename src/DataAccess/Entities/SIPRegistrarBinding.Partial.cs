@@ -78,8 +78,8 @@ namespace devcall.DataAccess
             RegistrarSIPSocket = registrarSIPEndPoint?.ToString();
             LastUpdate = DateTime.UtcNow;
 
-            if (IPSocket.IsPrivateAddress(bindingURI.Host) && bindingURI.Host != remoteSIPEndPoint.GetIPEndPoint().ToString())
-            {
+            //if (IPSocket.IsPrivateAddress(bindingURI.Host) && bindingURI.Host != remoteSIPEndPoint.GetIPEndPoint().ToString())
+            //{
                 // The Contact URI Host is used by registrars as the contact socket for the user so it needs to be changed to reflect the socket
                 // the intial request was received on in order to work around NAT. It's no good just relying on private addresses as a lot of User Agents
                 // determine their public IP but NOT their public port so they send the wrong port in the Contact header.
@@ -88,7 +88,7 @@ namespace devcall.DataAccess
                 var mangledURI = bindingURI.CopyOf();
                 mangledURI.Host = remoteSIPEndPoint.GetIPEndPoint().ToString();
                 MangledContactURI = mangledURI.ToString();
-            }
+            //}
 
             Expiry = expirySeconds;
 

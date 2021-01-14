@@ -62,12 +62,17 @@ namespace devcall
         /// <summary>
         /// The port that the SIP transport layer will attempt to listen on.
         /// </summary>
-        public const string SIP_LISTEN_PORT = "SIPListenPort";
+        public const string SIP_LISTEN_PORT = "SIPSorcery:SIPListenPort";
 
         /// <summary>
-        /// The public IP address that will be used in SIP Contact headers set by the SIP transport
-        /// layer. Typically this is the public IP address of the SIP load balancer.
+        /// The port that the SIP transport layer will attempt to listen on for TLS conections.
         /// </summary>
-        public const string SIP_PUBLIC_IPADDRESS = "SIPPublicIPAddress";
+        public const string SIP_TLS_LISTEN_PORT = "SIPSorcery:SIPTlsListenPort";
+
+        /// <summary>
+        /// The contach host that will be used in Contact headers set by the SIP transport
+        /// layer. Typically this is the public IP address or hostname of the SIP load balancer.
+        /// </summary>
+        public const string SIP_CONTACT_HOST = "SIPSorcery:SIPContactHost";
     }
 }

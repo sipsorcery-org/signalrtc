@@ -15,9 +15,9 @@
 //-----------------------------------------------------------------------------
 
 using System;
-using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,21 +91,33 @@ namespace devcall
 
             // Get application config settings.
             int listenPort = _config.GetValue<int>(ConfigKeys.SIP_LISTEN_PORT, DEFAULT_SIP_LISTEN_PORT);
-            string publicIPAddress = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_IPADDRESS, null);
+            int tlsListenPort = _config.GetValue<int>(ConfigKeys.SIP_TLS_LISTEN_PORT, DEFAULT_SIPS_LISTEN_PORT);
+            string sipContactHost = _config.GetValue<string>(ConfigKeys.SIP_CONTACT_HOST, null);
 
-            if (IPAddress.TryParse(publicIPAddress, out var ipAddr))
+            if (!string.IsNullOrWhiteSpace(sipContactHost))
             {
-                _sipTransport.ContactHost = ipAddr.ToString();
+                _sipTransport.ContactHost = sipContactHost;
                 _logger.LogInformation($"SIP transport contact address set to {_sipTransport.ContactHost}.");
             }
 
             if (_tlsCertificate != null)
             {
-                _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, DEFAULT_SIPS_LISTEN_PORT)));
+                _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, tlsListenPort)));
             }
 
             _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
             _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
+
+            if(Socket.OSSupportsIPv6)
+            {
+                if (_tlsCertificate != null)
+                {
+                    _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.IPv6Any, tlsListenPort)));
+                }
+
+                _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort)));
+                _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort)));
+            }
 
             var listeningEP = _sipTransport.GetSIPChannels().First().ListeningSIPEndPoint;
             _logger.LogInformation($"SIP transport listening on {listeningEP}.");

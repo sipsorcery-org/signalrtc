@@ -234,7 +234,7 @@ namespace devcall
                                 //DateTime startTime = DateTime.Now;
                                 //m_bindingsPersistor.Update(binding);
                                 //m_registrarBindingDataLayer.Update(binding);
-                                m_registrarBindingDataLayer.RefreshBinding(binding.ID, bindingExpiry, remoteSIPEndPoint, proxySIPEndPoint, registrarSIPEndPoint, false);
+                                m_registrarBindingDataLayer.RefreshBinding(binding.ID, bindingExpiry, remoteSIPEndPoint, proxySIPEndPoint, registrarSIPEndPoint);
                                 //TimeSpan duration = DateTime.Now.Subtract(startTime);
                                 //FireSIPMonitorLogEvent(new SIPMonitorConsoleEvent(SIPMonitorServerTypesEnum.Registrar, SIPMonitorEventTypesEnum.RegistrarTiming, "Binding database update time for " + sipAccountAOR + " took " + duration.TotalMilliseconds + "ms.", null));
                                 //FireSIPMonitorLogEvent(new SIPMonitorMachineEvent(SIPMonitorMachineEventTypesEnum.SIPRegistrarBindingUpdate, sipAccount.Owner, sipAccount.Id.ToString(), SIPURI.ParseSIPURIRelaxed(sipAccountAOR)));
