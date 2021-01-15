@@ -110,7 +110,7 @@ namespace devcall
                     }
                     else
                     {
-                        Logger.LogWarning("A binding returned from the database as expired wasn't. " + binding.ID + " and " + binding.MangledContactURI + ", last register " +
+                        Logger.LogWarning("A binding returned from the database as expired wasn't. " + binding.ID + " and " + binding.ContactURI + ", last register " +
                                 binding.LastUpdate.ToString("HH:mm:ss") + ", expiry " + binding.Expiry + ", expiry time " + binding.ExpiryTime.ToString("HH:mm:ss") +
                                 ", checkedtime " + expiryTime.ToString("HH:mm:ss") + ", now " + DateTime.UtcNow.ToString("HH:mm:ss") + ".");
 

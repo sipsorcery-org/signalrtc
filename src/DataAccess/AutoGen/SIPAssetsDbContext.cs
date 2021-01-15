@@ -245,10 +245,6 @@ namespace devcall.DataAccess
 
                 entity.Property(e => e.LastUpdate).HasColumnType("datetime");
 
-                entity.Property(e => e.MangledContactURI)
-                    .HasMaxLength(767)
-                    .IsUnicode(false);
-
                 entity.Property(e => e.ProxySIPSocket).HasMaxLength(64);
 
                 entity.Property(e => e.RegistrarSIPSocket).HasMaxLength(64);

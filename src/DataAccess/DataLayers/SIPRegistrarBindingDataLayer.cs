@@ -87,10 +87,6 @@ namespace devcall.DataAccess
                 existing.ProxySIPSocket = proxySIPEndPoint?.ToString();
                 existing.RegistrarSIPSocket = registrarSIPEndPoint?.ToString();
 
-                var mangledURI = SIPURI.ParseSIPURIRelaxed(existing.ContactURI);
-                mangledURI.Host = remoteSIPEndPoint.GetIPEndPoint().ToString();
-                existing.MangledContactURI = mangledURI.ToString();
-
                 db.SaveChanges();
 
                 return existing;

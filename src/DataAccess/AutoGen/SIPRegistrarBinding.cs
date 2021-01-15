@@ -11,7 +11,6 @@ namespace devcall.DataAccess
         public Guid SIPAccountID { get; set; }
         public string UserAgent { get; set; }
         public string ContactURI { get; set; }
-        public string MangledContactURI { get; set; }
         public int Expiry { get; set; }
         public string RemoteSIPSocket { get; set; }
         public string ProxySIPSocket { get; set; }

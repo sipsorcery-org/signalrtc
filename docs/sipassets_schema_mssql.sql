@@ -43,7 +43,6 @@ create table SIPRegistrarBindings
  SIPAccountID uniqueidentifier not null,
  UserAgent nvarchar(1024),
  ContactURI nvarchar(767) not null,			-- This is the URI the user agent sent in its Contact header requesting a binding for.
- MangledContactURI varchar(767),			-- The is the URI the Registrar deemed in its wisdom was the binding the user agent really wanted set (wisdom=try and cope with NAT).
  Expiry int not null,
  RemoteSIPSocket nvarchar(64) not null,
  ProxySIPSocket nvarchar(64),
