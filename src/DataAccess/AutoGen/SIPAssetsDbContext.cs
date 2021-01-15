@@ -23,6 +23,7 @@ namespace devcall.DataAccess
         public virtual DbSet<SIPDialPlan> SIPDialPlans { get; set; }
         public virtual DbSet<SIPDomain> SIPDomains { get; set; }
         public virtual DbSet<SIPRegistrarBinding> SIPRegistrarBindings { get; set; }
+        public virtual DbSet<SessionCache> SessionCaches { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -116,13 +117,13 @@ namespace devcall.DataAccess
 
                 entity.Property(e => e.ID).ValueGeneratedNever();
 
-                entity.Property(e => e.Inserted)
-                    .HasColumnType("datetime")
-                    .HasDefaultValueSql("(sysdatetime())");
-
                 entity.Property(e => e.HA1Digest)
                     .IsRequired()
                     .HasMaxLength(32);
+
+                entity.Property(e => e.Inserted)
+                    .HasColumnType("datetime")
+                    .HasDefaultValueSql("(sysdatetime())");
 
                 entity.Property(e => e.SIPUsername)
                     .IsRequired()
@@ -166,7 +167,12 @@ namespace devcall.DataAccess
                     .HasMaxLength(512)
                     .IsUnicode(false);
 
-                entity.Property(e => e.ProxySIPSocket)
+                entity.Property(e => e.ProxySendFrom)
+                    .HasMaxLength(64)
+                    .IsUnicode(false);
+
+                entity.Property(e => e.RemoteSocket)
+                    .IsRequired()
                     .HasMaxLength(64)
                     .IsUnicode(false);
 
@@ -193,7 +199,7 @@ namespace devcall.DataAccess
                     .WithMany(p => p.SIPCalls)
                     .HasForeignKey(d => d.CDRID)
                     .OnDelete(DeleteBehavior.Cascade)
-                    .HasConstraintName("FK__SIPCalls__CDRID__681373AD");
+                    .HasConstraintName("FK__SIPCalls__CDRID__0880433F");
             });
 
             modelBuilder.Entity<SIPDialPlan>(entity =>
@@ -259,6 +265,19 @@ namespace devcall.DataAccess
                     .WithMany(p => p.SIPRegistrarBindings)
                     .HasForeignKey(d => d.SIPAccountID)
                     .HasConstraintName("FK__SIPRegist__SIPAc__756D6ECB");
+            });
+
+            modelBuilder.Entity<SessionCache>(entity =>
+            {
+                entity.ToTable("SessionCache");
+
+                entity.HasIndex(e => e.ExpiresAtTime, "Index_ExpiresAtTime");
+
+                entity.Property(e => e.Id)
+                    .HasMaxLength(449)
+                    .UseCollation("SQL_Latin1_General_CP1_CS_AS");
+
+                entity.Property(e => e.Value).IsRequired();
             });
 
             OnModelCreatingPartial(modelBuilder);

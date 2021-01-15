@@ -17,11 +17,12 @@ namespace devcall.DataAccess
         public string RemoteTarget { get; set; }
         public string LocalUserField { get; set; }
         public string RemoteUserField { get; set; }
-        public string ProxySIPSocket { get; set; }
+        public string ProxySendFrom { get; set; }
         public string RouteSet { get; set; }
         public int? CallDurationLimit { get; set; }
         public string Direction { get; set; }
         public DateTime Inserted { get; set; }
+        public string RemoteSocket { get; set; }
 
         public virtual CDR CDR { get; set; }
     }

@@ -126,22 +126,6 @@ namespace devcall
             }
         }
 
-        public static SIPURI Mangle(SIPURI uri, IPEndPoint receivedOn)
-        {
-            if (uri != null && receivedOn != null && IPAddress.TryParse(uri.HostAddress, out var ipv4Host))
-            {
-
-                if (ipv4Host.IsPrivate() && !IPAddress.Equals(ipv4Host, receivedOn.Address))
-                {
-                    var mangledURI = uri.CopyOf();
-                    mangledURI.Host = mangledURI.Host.Replace(mangledURI.Host, receivedOn.ToString());
-                    return mangledURI;
-                }
-            }
-
-            return null;
-        }
-
         private void ProcessInviteRequest(string threadName)
         {
             try
@@ -160,16 +144,6 @@ namespace devcall
                                 
                                 if (uasTransaction.TransactionFinalResponse == null)
                                 {
-                                    // In order to help cope with IPv4 NAT's apply some logic to determine if the Contact header URI looks likely
-                                    // to fail which in turn would result in any in-dialgoue requests not being delivered.
-                                    var contact = uasTransaction.TransactionRequest.Header.Contact?.FirstOrDefault();
-                                    var mangledContact = Mangle(contact?.ContactURI, uasTransaction.TransactionRequest.RemoteSIPEndPoint.GetIPEndPoint());
-                                    if(mangledContact != null)
-                                    {
-                                        Logger.LogDebug($"SIPB2BUserAgentCore setting uastx proxy received from to {uasTransaction.TransactionRequest.RemoteSIPEndPoint}.");
-                                        uasTransaction.TransactionRequest.Header.ProxyReceivedFrom = uasTransaction.TransactionRequest.RemoteSIPEndPoint.ToString();
-                                    }
-
                                     Forward(uasTransaction, sipAccount).Wait();
                                 }
                             }

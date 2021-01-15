@@ -47,11 +47,12 @@ namespace devcall.DataAccess
             RemoteTarget = dialogue.RemoteTarget.ToString();
             LocalUserField = dialogue.LocalUserField.ToString();
             RemoteUserField = dialogue.RemoteUserField.ToString();
-            ProxySIPSocket = dialogue.ProxySendFrom;
+            ProxySendFrom = dialogue.ProxySendFrom;
             RouteSet = dialogue.RouteSet?.ToString();
             CallDurationLimit = dialogue.CallDurationLimit;
             Direction = dialogue.Direction.ToString();
             Inserted = dialogue.Inserted;
+            RemoteSocket = dialogue.RemoteSIPEndPoint?.ToString();
         }
 
         /// <summary>
@@ -71,11 +72,12 @@ namespace devcall.DataAccess
             dialogue.RemoteTarget = SIPURI.ParseSIPURIRelaxed(RemoteTarget);
             dialogue.LocalUserField = SIPUserField.ParseSIPUserField(LocalUserField);
             dialogue.RemoteUserField = SIPUserField.ParseSIPUserField(RemoteUserField);
-            dialogue.ProxySendFrom = ProxySIPSocket;
+            dialogue.ProxySendFrom = ProxySendFrom;
             dialogue.RouteSet = string.IsNullOrWhiteSpace(RouteSet) ? null : SIPRouteSet.ParseSIPRouteSet(RouteSet);
             dialogue.CallDurationLimit = CallDurationLimit.GetValueOrDefault();
             dialogue.Direction = Enum.Parse<SIPCallDirection>(Direction, true);
             dialogue.Inserted = Inserted;
+            dialogue.RemoteSIPEndPoint = (RemoteSocket != null) ? SIPEndPoint.ParseSIPEndPoint(RemoteSocket) : null;
 
             return dialogue;
         }

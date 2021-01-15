@@ -197,7 +197,17 @@ namespace devcall
 
             if (sendBye)
             {
-                dialogue.Hangup(m_sipTransport, m_outboundProxy);
+                // In order to help cope with IPv4 NAT's apply some logic to determine if the Contact header URI looks likely
+                // to fail which in turn would result in any in-dialgoue requests not being delivered.
+                var target = dialogue.RemoteTarget;
+                var mangledTarget = SIPURI.Mangle(target, dialogue.RemoteSIPEndPoint?.GetIPEndPoint());
+                if (mangledTarget != null)
+                {
+                    logger.LogDebug($"SIPCallManager adjusting BYE target from {target} to {mangledTarget}.");
+                    target = mangledTarget;
+                }
+
+                dialogue.Hangup(m_sipTransport, m_outboundProxy, target);
                 OnCallHungup?.Invoke(dialogue);
             }
 

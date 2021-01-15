@@ -94,11 +94,12 @@ create table SIPCalls
  RemoteTarget varchar(256) not null,
  LocalUserField varchar(512) not null,
  RemoteUserField varchar(512) not null,
- ProxySIPSocket varchar(64),
+ ProxySendFrom varchar(64),
  RouteSet varchar(512),
  CallDurationLimit int,
  Direction varchar(3) not null,					-- In or Out with respect to the proxy.
  Inserted datetime not null,
+ RemoteSocket varchar(64) not null,	
  Primary Key(ID),
  Foreign Key(CDRID) references CDR(ID) on delete cascade on update cascade
 );
