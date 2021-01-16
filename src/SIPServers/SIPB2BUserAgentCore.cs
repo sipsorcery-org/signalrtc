@@ -212,6 +212,8 @@ namespace devcall
         private async Task Forward(UASInviteTransaction uasTx, ISIPAccount callerSIPAccount)
         {
             var invReq = uasTx.TransactionRequest;
+            uasTx.TransactionStateChanged += (tx) => Logger.LogDebug($"B2B uas tx state changed to {tx.TransactionState}.");
+            uasTx.TransactionTraceMessage += (tx, msg) => Logger.LogDebug($"B2B uas tx trace message. {msg}");
 
             Logger.LogDebug($"B2B commencing forward for caller {invReq.Header.From.FromURI} to {invReq.URI}.");
 
