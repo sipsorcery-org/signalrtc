@@ -34,6 +34,24 @@ namespace devcall
         public ISIPAccount From { get; set; }
     }
 
+    /// <summary>
+    /// Loads a dialplan for the B2B user agent core from a database. The dialplan must be valid C#
+    /// source and is compiled with Roslyn and executed for each incoming call.
+    /// </summary>
+    /// <example>
+    /// var inUri = uasTx.TransactionRequestURI;
+    /// 
+    /// switch (inUri.User)
+    /// {
+    ///     case "123":
+    ///         //return new SIPCallDescriptor("time@sipsorcery.com", uasTx.TransactionRequest.Body);
+    ///         return new SIPCallDescriptor("aaron@192.168.0.50:6060", uasTx.TransactionRequest.Body);
+    ///     case "456":
+    ///         return new SIPCallDescriptor("idontexist@sipsorcery.com", uasTx.TransactionRequest.Body);
+    ///     default:
+    ///         return null;
+    /// }
+    /// </example>
     public class SIPDialPlanManager
     {
         public const string DEFAULT_DIALPLAN_NAME = "default";
