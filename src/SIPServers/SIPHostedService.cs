@@ -15,6 +15,7 @@
 //-----------------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -26,6 +27,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
+using SIPSorcery.Sys;
 using devcall.DataAccess;
 
 namespace devcall
@@ -54,6 +56,12 @@ namespace devcall
         private SIPCallManager _sipCallManager;
         private CDRDataLayer _cdrDataLayer;
         private SIPDomainManager _sipDomainManager;
+
+        // Fields for setting the Contact header in SIP messages.
+        public string _publicContactHostname;
+        public IPAddress _publicContactIPv4;
+        public IPAddress _publicContactIPv6;
+        public Func<IPAddress, bool> _isPrivateSubnet = (ipaddr) => false;
 
         public SIPHostedService(
             ILogger<SIPHostedService> logger,
@@ -92,14 +100,54 @@ namespace devcall
             // Get application config settings.
             int listenPort = _config.GetValue<int>(ConfigKeys.SIP_LISTEN_PORT, DEFAULT_SIP_LISTEN_PORT);
             int tlsListenPort = _config.GetValue<int>(ConfigKeys.SIP_TLS_LISTEN_PORT, DEFAULT_SIPS_LISTEN_PORT);
-            string sipContactHost = _config.GetValue<string>(ConfigKeys.SIP_CONTACT_HOST, null);
 
-            if (!string.IsNullOrWhiteSpace(sipContactHost))
+            // Set the fields sed for setting the SIP Contact header.
+            _publicContactHostname = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_HOSTNAME, null);
+            IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV4, null), out _publicContactIPv4);
+            IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV6, null), out _publicContactIPv6);
+            
+            IConfigurationSection sipPrivateSubnets = _config.GetSection(ConfigKeys.SIP_PRIVATE_CONTACT_SUBNETS);
+
+            _logger.LogInformation($"SIP transport public contact hostname set to {_publicContactHostname}.");
+            _logger.LogInformation($"SIP transport public contact IPv4 set to {_publicContactIPv4}.");
+            _logger.LogInformation($"SIP transport public contact IPv6 set to {_publicContactIPv6}.");
+
+            if (sipPrivateSubnets != null)
             {
-                _sipTransport.ContactHost = sipContactHost;
-                _logger.LogInformation($"SIP transport contact address set to {_sipTransport.ContactHost}.");
+                List<Func<IPAddress, bool>> isInSubnetFunctions = new List<Func<IPAddress, bool>>();
+
+                foreach(string subnet in sipPrivateSubnets.Get<string[]>())
+                {
+                    _logger.LogInformation($"SIP transport private subnet {subnet}.");
+
+                    if (subnet.Contains('/'))
+                    {
+                        string[] fields = subnet.Split('/');
+                        IPAddress network = IPAddress.Parse(fields[0]);
+                        IPAddress mask = IPAddress.Parse(fields[1]);
+
+                        isInSubnetFunctions.Add((ipaddr) => network.IsInSameSubnet(ipaddr, mask));
+                    }
+                }
+
+                if(isInSubnetFunctions.Count > 0)
+                {
+                    _isPrivateSubnet = (ipaddr) =>
+                    {
+                        foreach(var isInFunc in isInSubnetFunctions)
+                        {
+                            if(isInFunc(ipaddr))
+                            {
+                                return true;
+                            }
+                        }
+
+                        return false;
+                    };
+                }
             }
 
+            // Create SIP channels.
             if (_tlsCertificate != null)
             {
                 _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, tlsListenPort)));
@@ -121,6 +169,9 @@ namespace devcall
 
             var listeningEP = _sipTransport.GetSIPChannels().First().ListeningSIPEndPoint;
             _logger.LogInformation($"SIP transport listening on {listeningEP}.");
+
+            _sipTransport.CustomiseRequestHeader = CustomiseContact;
+            _sipTransport.CustomiseResponseHeader = CustomiseContact;
 
             EnableTraceLogs(_sipTransport);
 
@@ -196,6 +247,87 @@ namespace devcall
             {
                 _logger.LogWarning($"Exception handling {sipRequest.Method}. {reqExcp.Message}");
             }
+        }
+
+        /// <summary>
+        /// This customisation method is used because a one sized fits all "Contact Host" does not work
+        /// for forwardings calls when the server can be on either side of the load balancer.
+        /// </summary>
+        /// <param name="localEP">The local end point that's been chosen by the transport layer to
+        /// send this request with.</param>
+        /// <param name="dstEP">The destination end point the request is going to be sent to.</param>
+        /// <param name="request">The request being sent.</param>
+        /// <returns>For requests that need to have their Contact header changed a new SIP Header instance
+        /// is returned otherwise null to indicate the original SIP header object can be used.</returns>
+        private SIPHeader CustomiseContact(SIPEndPoint localEP, SIPEndPoint dstEP, SIPRequest request)
+        {
+            if (request.Method == SIPMethodsEnum.INVITE)
+            {
+                return CustomiseInviteContactHeader(dstEP, request.Header);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// This customisation method is used because a one sized fits all "Contact Host" does not work
+        /// for forwardings calls when the server can be on either side of the load balancer.
+        /// </summary>
+        /// <param name="localEP">The local end point that's been chosen by the transport layer to
+        /// send this response with.</param>
+        /// <param name="dstEP">The destination end point the response is going to be sent to.</param>
+        /// <param name="response">The response being sent.</param>
+        /// <returns>For responses that need to have their Contact header changed a new SIP Header instance
+        /// is returned otherwise null to indicate the original SIP header object can be used.</returns>
+        private SIPHeader CustomiseContact(SIPEndPoint localEP, SIPEndPoint dstEP, SIPResponse response)
+        {
+            if (response.Header.CSeqMethod == SIPMethodsEnum.INVITE)
+            {
+                return CustomiseInviteContactHeader(dstEP, response.Header);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Customises the Contact header for an INVITE request or response based on the destination
+        /// it is being sent to.
+        /// </summary>
+        /// <param name="dstEP">The destination end point for the send.</param>
+        /// <param name="inviteHeader">The original header from the INVITE request or response.</param>
+        /// <returns>If an adjustment was made then a new SIP header instance is returned. If not, null is returned.</returns>
+        private SIPHeader CustomiseInviteContactHeader(SIPEndPoint dstEP, SIPHeader inviteHeader)
+        {
+            var dstAddress = dstEP.GetIPEndPoint().Address;
+
+            if (!_isPrivateSubnet(dstAddress) && inviteHeader.Contact != null && inviteHeader.Contact.Count == 1)
+            {
+                // The priority is use the public IP address fields if they are available (saves DNS lookups) and
+                // fallback to the hostname if they are not.
+
+                // Port of 0 is set when user agents set Contact Host to "0.0.0.0:0" which is the method to
+                // get the transport layer to set it at send time.
+                bool isDefaultPort = inviteHeader.Contact[0].ContactURI.IsDefaultPort() || inviteHeader.Contact[0].ContactURI.HostPort == "0";
+
+                if (dstAddress.AddressFamily == AddressFamily.InterNetwork && _publicContactIPv4 != null)
+                {
+                    var copy = inviteHeader.Copy();
+                    copy.Contact[0].ContactURI.Host = isDefaultPort ? _publicContactIPv4.ToString() : $"{_publicContactIPv4}:{inviteHeader.Contact[0].ContactURI.HostPort}";
+                    return copy;
+                }
+                else if (dstAddress.AddressFamily == AddressFamily.InterNetworkV6 && _publicContactIPv6 != null)
+                {
+                    var copy = inviteHeader.Copy();
+                    copy.Contact[0].ContactURI.Host = isDefaultPort ? _publicContactIPv6.ToString() : $"{_publicContactIPv6}:{inviteHeader.Contact[0].ContactURI.HostPort}";
+                    return copy;
+                }
+                else if(!string.IsNullOrWhiteSpace(_publicContactHostname))
+                {
+                    var copy = inviteHeader.Copy();
+                    copy.Contact[0].ContactURI.Host = _publicContactHostname;
+                    return copy;
+                }
+            }
+
+            return null;
         }
 
         /// <summary>

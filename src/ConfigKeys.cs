@@ -70,9 +70,29 @@ namespace devcall
         public const string SIP_TLS_LISTEN_PORT = "SIPSorcery:SIPTlsListenPort";
 
         /// <summary>
-        /// The contach host that will be used in Contact headers set by the SIP transport
-        /// layer. Typically this is the public IP address or hostname of the SIP load balancer.
+        /// The contact host that will be used in Contact headers set by the SIP transport
+        /// layer. Typically this is a hostname pointing to the SIP load balancer.
         /// </summary>
-        public const string SIP_CONTACT_HOST = "SIPSorcery:SIPContactHost";
+        public const string SIP_PUBLIC_CONTACT_HOSTNAME = "SIPSorcery:ContactHost:PublicHostname";
+
+        /// <summary>
+        /// The contact host that will be used in Contact headers set by the SIP transport
+        /// layer for IPv4 SIP messages. Typically this is the public IPv4 address of the 
+        /// SIP load balancer.
+        /// </summary>
+        public const string SIP_PUBLIC_CONTACT_PUBLICIPV4 = "SIPSorcery:ContactHost:PublicIPv4";
+
+        /// <summary>
+        /// The contact host that will be used in Contact headers set by the SIP transport
+        /// layer for IPv6 SIP messages. Typically this is the public IPv6 address of the 
+        /// SIP load balancer.
+        /// </summary>
+        public const string SIP_PUBLIC_CONTACT_PUBLICIPV6 = "SIPSorcery:ContactHost:PublicIPv6";
+
+        /// <summary>
+        /// A list of private subnets (private meaning the SIP traffic should not traverse the 
+        /// Load Balancer) that should not have the public Contact Host set.
+        /// </summary>
+        public const string SIP_PRIVATE_CONTACT_SUBNETS = "SIPSorcery:ContactHost:PrivateSubnets";
     }
 }
