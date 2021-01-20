@@ -56,7 +56,10 @@ namespace devcall
     {
         public const string DEFAULT_DIALPLAN_NAME = "default";
         public const string DIAL_PLAN_CODE_TEMPLATE =
-@"public static class DialPlanScript
+@"
+using fwd = SIPSorcery.SIP.App.SIPCallDescriptor;
+
+public static class DialPlanScript
 {{
     public static SIPCallDescriptor Lookup(UASInviteTransaction uasTx, ISIPAccount from)
     {{
@@ -74,25 +77,23 @@ namespace devcall
             _sipDialPlanDataLayer = new SIPDialPlanDataLayer(dbContextFactory);
         }
 
-        public void LoadDialPlan()
+        public async Task<SIPDialPlan> LoadDialPlan()
         {
-            var dialplan = _sipDialPlanDataLayer.Get(x => x.DialPlanName == DEFAULT_DIALPLAN_NAME);
+            var dialplan = await _sipDialPlanDataLayer.Get(x => x.DialPlanName == DEFAULT_DIALPLAN_NAME);
 
             if (dialplan == null)
             {
                 _logger.LogError($"SIP DialPlan Manager could not load the default dialplan. Ensure a dialplan with the name of \"{DEFAULT_DIALPLAN_NAME}\" exists.");
             }
-            else
-            {
-                CompileDialPlan(dialplan);
-            }
+
+            return dialplan;
         }
 
-        private void CompileDialPlan(SIPDialPlan dialplan)
+        public string CompileDialPlan(string dialplanScript, DateTime? lastUpdated)
         {
             try
             {
-                string dialPlanClass = string.Format(DIAL_PLAN_CODE_TEMPLATE, dialplan.DialPlanScript);
+                string dialPlanClass = string.Format(DIAL_PLAN_CODE_TEMPLATE, dialplanScript);
 
                 _logger.LogDebug($"Compiling dialplan...");
 
@@ -108,11 +109,18 @@ namespace devcall
 
                 var duration = DateTime.Now.Subtract(startTime);
                 _logger.LogInformation($"SIP DialPlan Manger successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
-                _dialplanLastUpdated = dialplan.LastUpdate;
+
+                if (lastUpdated != null)
+                {
+                    _dialplanLastUpdated = lastUpdated.Value;
+                }
+
+                return null;
             }
             catch (Exception excp)
             {
                 _logger.LogError($"SIP DialPlan Manger failed to compile dialplan. {excp.Message}");
+                return excp.Message;
             }
         }
 
@@ -127,24 +135,12 @@ namespace devcall
         /// be bridged to the UAS leg.</returns>
         public async Task<SIPCallDescriptor> Lookup(UASInviteTransaction uasTx, ISIPAccount from)
         {
-            if (_dialplanLastUpdated == DateTime.MinValue)
-            {
-                // Indicates the dialplan failed to load when the server started up.
-                LoadDialPlan();
-            }
-            else
-            {
-                var dialplan = _sipDialPlanDataLayer.Get(x => x.DialPlanName == DEFAULT_DIALPLAN_NAME);
+            var dialplan = await LoadDialPlan();
 
-                if (dialplan == null)
-                {
-                    _logger.LogError($"SIP DialPlan Manager could not load the default dialplan. Ensure a dialplan with the name of \"{DEFAULT_DIALPLAN_NAME}\" exists.");
-                }
-                else if(dialplan.LastUpdate > _dialplanLastUpdated)
-                {
-                    _logger.LogInformation($"SIP DialPlan Manager loading updated dialplan.");
-                    CompileDialPlan(dialplan);
-                }
+            if (dialplan != null && dialplan.LastUpdate > _dialplanLastUpdated)
+            {
+                _logger.LogInformation($"SIP DialPlan Manager loading updated dialplan.");
+                CompileDialPlan(dialplan.DialPlanScript, dialplan.LastUpdate);
             }
 
             if (_dialPlanScriptRunner != null)
@@ -156,6 +152,11 @@ namespace devcall
             {
                 return null;
             }
+        }
+
+        public async Task UpdateDialPlanScript(string dialPlanScript)
+        {
+            await _sipDialPlanDataLayer.UpdateDialPlanScript(dialPlanScript);
         }
     }
 }

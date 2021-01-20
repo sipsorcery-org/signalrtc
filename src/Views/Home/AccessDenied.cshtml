@@ -1,5 +1,5 @@
 ﻿@{
-    ViewData["Title"] = "Home";
+    ViewData["Title"] = "Access Ddenied";
 }
 
 @if (!string.IsNullOrWhiteSpace(TempData["Error"] as string))
@@ -9,6 +9,7 @@
     </div>
 }
 
+
 @if (!string.IsNullOrWhiteSpace(TempData["Success"] as string))
 {
     <div class="alert alert-success" role="alert">
@@ -16,6 +17,4 @@
     </div>
 }
 
-<p>Welcome to the Developer Call demonstration application.</p>
-
-<p>Click <a asp-action="Login">Login</a> to Create or Manage your complimentary SIP Account (note that a GitHub account is required to use this demo).</p>
+<p>Access Denied.</p>

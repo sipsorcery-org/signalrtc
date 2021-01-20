@@ -14,10 +14,10 @@
 //-----------------------------------------------------------------------------
 
 using System.IO;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -62,7 +62,7 @@ namespace devcall
             {
                 options.Cookie.HttpOnly = true;
                 options.Cookie.IsEssential = true;
-                options.Cookie.Name = ".devcall.session";
+                options.Cookie.Name = COOKIE_SCHEME;
             });
 
             services.AddSingleton(Program.TlsCertificate);
@@ -84,7 +84,7 @@ namespace devcall
             services.AddAuthentication(COOKIE_SCHEME) // Sets the default scheme to cookies
                 .AddCookie(COOKIE_SCHEME, options =>
                 {
-                    options.AccessDeniedPath = "/home/index";
+                    options.AccessDeniedPath = "/home/accessdenied";
                     options.LoginPath = "/home/index";
                 });
         }
@@ -114,6 +114,11 @@ namespace devcall
                 });
 
                 endpoints.MapControllers();
+
+                endpoints.MapControllerRoute(
+                      name: "areas",
+                      pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
+                    );
 
                 endpoints.MapControllerRoute(
                    name: "default",

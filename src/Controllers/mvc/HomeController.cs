@@ -1,5 +1,21 @@
-﻿using System;
+﻿//-----------------------------------------------------------------------------
+// Filename: HomeController.cs
+//
+// Description: User controller to login and manage SIP account.
+//
+// Author(s):
+// Aaron Clauson (aaron@sipsorcery.com)
+// 
+// History:
+// 01 Jan 2021	Aaron Clauson	Created, Dublin, Ireland.
+//
+// License: 
+// BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
+//-----------------------------------------------------------------------------
+
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Claims;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication;
@@ -31,6 +47,7 @@ namespace demo.Controllers
         private readonly string _githubAppName;
         private readonly string _githubClientID;
         private readonly string _githubClientSecret;
+        private readonly string[] _adminUsers;
 
         public HomeController(
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
@@ -46,6 +63,8 @@ namespace demo.Controllers
             _githubAppName = config[ConfigKeys.GITHUB_OAUTH_APPNAME];
             _githubClientID = config[ConfigKeys.GITHUB_OAUTH_CLIENTID];
             _githubClientSecret = config[ConfigKeys.GITHUB_OAUTH_CLIENTSECRET];
+
+            _adminUsers = _config.GetSection(ConfigKeys.ADMIN_USERNAMES).Get<string[]>();
         }
 
         public IActionResult Index()
@@ -58,6 +77,11 @@ namespace demo.Controllers
             {
                 return View();
             }
+        }
+
+        public IActionResult AccessDenied()
+        {
+            return View();
         }
 
         public async Task<ActionResult> Logout()
@@ -92,7 +116,7 @@ namespace demo.Controllers
 
         public async Task<ActionResult> Authorize(string code, string state)
         {
-            if (String.IsNullOrEmpty(code))
+            if (string.IsNullOrEmpty(code))
             {
                 return RedirectToAction("Index");
             }
@@ -122,8 +146,14 @@ namespace demo.Controllers
                     var claims = new List<Claim>
                     {
                         new Claim("user", user.Id.ToString()),
-                        new Claim("role", "Member")
+                        new Claim("role", "Member"),
                     };
+
+                    if(_adminUsers?.Contains(user.Id.ToString()) == true)
+                    {
+                        _logger.LogDebug($"GitHub user {user.Id} set as admin.");
+                        claims.Add(new Claim("role", "Admin"));
+                    }
 
                     await HttpContext.SignInAsync(new ClaimsPrincipal(new ClaimsIdentity(claims, "Cookies", "user", "role")));
 

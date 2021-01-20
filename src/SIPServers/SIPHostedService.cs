@@ -77,7 +77,6 @@ namespace devcall
 
             // Load dialplan script and make sure it can be compiled.
             _sipDialPlan = new SIPDialPlanManager(dbContextFactory);
-            _sipDialPlan.LoadDialPlan();
             _sipDomainManager = new SIPDomainManager(dbContextFactory);
             _sipDomainManager.Load().Wait();
 
@@ -126,7 +125,8 @@ namespace devcall
                         IPAddress network = IPAddress.Parse(fields[0]);
                         IPAddress mask = IPAddress.Parse(fields[1]);
 
-                        isInSubnetFunctions.Add((ipaddr) => network.IsInSameSubnet(ipaddr, mask));
+                        isInSubnetFunctions.Add((ipaddr) => ipaddr.AddressFamily == AddressFamily.InterNetwork
+                            && network.IsInSameSubnet(ipaddr, mask));
                     }
                 }
 
@@ -180,6 +180,16 @@ namespace devcall
             _b2bUserAgentCore.Start(B2BUA_CORE_WORKER_THREADS);
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
+
+            // Warm up the dialplan so it's ready for the first call.
+            _ = Task.Run(async () =>
+            {
+                var dp = await _sipDialPlan.LoadDialPlan();
+                if(dp != null)
+                {
+                    _sipDialPlan.CompileDialPlan(dp.DialPlanScript, dp.LastUpdate);
+                }
+            });
 
             return Task.CompletedTask;
         }

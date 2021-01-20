@@ -55,6 +55,11 @@ namespace devcall
         public const string GITHUB_OAUTH_CLIENTSECRET = "GitHub:ClientSecret";
 
         /// <summary>
+        /// The list of users that have been granted administrative privileges.
+        /// </summary>
+        public const string ADMIN_USERNAMES = "Admins";
+
+        /// <summary>
         /// This is the default SIP domain that will be used for managing SIP accounts.
         /// </summary>
         public const string SIP_DOMAIN = "SIPDomain";

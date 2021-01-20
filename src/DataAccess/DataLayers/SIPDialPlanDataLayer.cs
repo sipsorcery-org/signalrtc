@@ -16,6 +16,7 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace devcall.DataAccess
@@ -29,19 +30,32 @@ namespace devcall.DataAccess
             _dbContextFactory = dbContextFactory;
         }
 
-        public SIPDialPlan Get(Guid id)
+        public Task<SIPDialPlan> Get(Guid id)
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPDialPlans.Where(x => x.ID == id).FirstOrDefault();
+                return db.SIPDialPlans.Where(x => x.ID == id).FirstOrDefaultAsync();
             }
         }
 
-        public SIPDialPlan Get(Expression<Func<SIPDialPlan, bool>> where)
+        public async Task<SIPDialPlan> Get(Expression<Func<SIPDialPlan, bool>> where)
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPDialPlans.Where(where).FirstOrDefault();
+                return await db.SIPDialPlans.Where(where).FirstOrDefaultAsync();
+            }
+        }
+
+        public async Task UpdateDialPlanScript(string dialPlanScript)
+        {
+            using (var db = _dbContextFactory.CreateDbContext())
+            {
+                var dialplan = await db.SIPDialPlans.FirstOrDefaultAsync();
+
+                dialplan.DialPlanScript = dialPlanScript;
+                dialplan.LastUpdate = DateTime.UtcNow;
+
+                await db.SaveChangesAsync();
             }
         }
     }
