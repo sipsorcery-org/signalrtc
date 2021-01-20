@@ -108,7 +108,7 @@ public static class DialPlanScript
                    .CreateDelegate();
 
                 var duration = DateTime.Now.Subtract(startTime);
-                _logger.LogInformation($"SIP DialPlan Manger successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
+                _logger.LogInformation($"SIP DialPlan Manager successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
 
                 if (lastUpdated != null)
                 {
@@ -119,7 +119,7 @@ public static class DialPlanScript
             }
             catch (Exception excp)
             {
-                _logger.LogError($"SIP DialPlan Manger failed to compile dialplan. {excp.Message}");
+                _logger.LogError($"SIP DialPlan Manager failed to compile dialplan. {excp.Message}");
                 return excp.Message;
             }
         }
