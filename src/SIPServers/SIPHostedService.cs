@@ -118,15 +118,16 @@ namespace devcall
                 foreach(string subnet in sipPrivateSubnets.Get<string[]>())
                 {
                     _logger.LogInformation($"SIP transport private subnet {subnet}.");
-
-                    if (subnet.Contains('/'))
+                    
+                    if(IPNetwork.TryParse(subnet, out var network))
                     {
-                        string[] fields = subnet.Split('/');
-                        IPAddress network = IPAddress.Parse(fields[0]);
-                        IPAddress mask = IPAddress.Parse(fields[1]);
-
-                        isInSubnetFunctions.Add((ipaddr) => ipaddr.AddressFamily == network.AddressFamily
-                            && network.IsInSameSubnet(ipaddr, mask));
+                        isInSubnetFunctions.Add((ipaddr) => 
+                            ipaddr.AddressFamily == network.AddressFamily
+                           && network.Contains(ipaddr));
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"IP network not recognised {subnet}.");
                     }
                 }
 
@@ -326,7 +327,7 @@ namespace devcall
                 else if (dstAddress.AddressFamily == AddressFamily.InterNetworkV6 && _publicContactIPv6 != null)
                 {
                     var copy = inviteHeader.Copy();
-                    copy.Contact[0].ContactURI.Host = isDefaultPort ? $"[{_publicContactIPv6.ToString()}]" : $"[{_publicContactIPv6}]:{inviteHeader.Contact[0].ContactURI.HostPort}";
+                    copy.Contact[0].ContactURI.Host = isDefaultPort ? $"[{_publicContactIPv6}]" : $"[{_publicContactIPv6}]:{inviteHeader.Contact[0].ContactURI.HostPort}";
                     return copy;
                 }
                 else if(!string.IsNullOrWhiteSpace(_publicContactHostname))
