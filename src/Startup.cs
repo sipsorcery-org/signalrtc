@@ -65,7 +65,11 @@ namespace devcall
                 options.Cookie.Name = COOKIE_SCHEME;
             });
 
-            services.AddSingleton(Program.TlsCertificate);
+            if (Program.TlsCertificate != null)
+            {
+                services.AddSingleton(Program.TlsCertificate);
+            }
+
             services.AddSingleton(typeof(SIPHostedService));
             services.AddHostedService<SIPHostedService>();
 

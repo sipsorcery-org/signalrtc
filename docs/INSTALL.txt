@@ -1,0 +1,8 @@
+Install SIP Registrar and B2B User Agent Server:
+
+- TODO: Set up database 
+- dotnet user-secrets set ConnectionStrings:SIPAssets "Data Source=localhost;Initial Catalog=SIPAssets;Persist Security Info=True;User ID=appuser;Password=password"
+
+Allow OAuth2 GitHub authentication:
+
+- dotnet user-secrets set GitHub:ClientSecret "secret"
