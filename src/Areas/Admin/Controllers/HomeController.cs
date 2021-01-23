@@ -13,6 +13,7 @@
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
 //-----------------------------------------------------------------------------
 
+using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -59,13 +60,14 @@ namespace devcall.Areas.Admin.Controllers
 
             var script = dialPlanScript?.Trim();
 
-            string errMessage = _sipDialPlanManager.CompileDialPlan(script);
+            DateTime lastUpdated = DateTime.UtcNow;
+            string errMessage = _sipDialPlanManager.CompileDialPlan(script, lastUpdated);
 
             if (errMessage == null)
             {
                 _logger.LogDebug("Dial plan compiled successfully, attempting to update database...");
 
-                await _sipDialPlanManager.UpdateDialPlanScript(script);
+                await _sipDialPlanManager.UpdateDialPlanScript(script, lastUpdated);
 
                 TempData["Success"] = "Dial plan script successfully updated.";
 

@@ -89,7 +89,7 @@ public static class DialPlanScript
             return dialplan;
         }
 
-        public string CompileDialPlan(string dialplanScript)
+        public string CompileDialPlan(string dialplanScript, DateTime lastUpdated)
         {
             try
             {
@@ -109,6 +109,8 @@ public static class DialPlanScript
 
                 var duration = DateTime.Now.Subtract(startTime);
                 _logger.LogInformation($"SIP DialPlan Manager successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
+
+                _dialplanLastUpdated = lastUpdated;
 
                 return null;
             }
@@ -132,14 +134,13 @@ public static class DialPlanScript
         {
             var dialplan = await LoadDialPlan();
 
-            //_logger.LogDebug($"Our dialplan last update {_dialplanLastUpdated}, database last update {dialplan.LastUpdate}.");
+            //_logger.LogDebug($"Our dialplan last update {TrimMilliseconds(_dialplanLastUpdated).ToString("o")}, " +
+            //    $"database last update {TrimMilliseconds(dialplan.LastUpdate).ToString("o")}.");
 
-            if (dialplan != null && dialplan.LastUpdate > _dialplanLastUpdated)
+            if (dialplan != null && TrimMilliseconds(dialplan.LastUpdate) > TrimMilliseconds(_dialplanLastUpdated))
             {
                 _logger.LogInformation($"SIP DialPlan Manager loading updated dialplan.");
-                CompileDialPlan(dialplan.DialPlanScript);
-
-                _dialplanLastUpdated = dialplan.LastUpdate;
+                CompileDialPlan(dialplan.DialPlanScript, dialplan.LastUpdate);
             }
 
             if (_dialPlanScriptRunner != null)
@@ -153,9 +154,14 @@ public static class DialPlanScript
             }
         }
 
-        public async Task UpdateDialPlanScript(string dialPlanScript)
+        public async Task UpdateDialPlanScript(string dialPlanScript, DateTime lastUpdate)
         {
-            _dialplanLastUpdated = await _sipDialPlanDataLayer.UpdateDialPlanScript(dialPlanScript);
+            await _sipDialPlanDataLayer.UpdateDialPlanScript(dialPlanScript, lastUpdate);
+        }
+
+        public static DateTime TrimMilliseconds(DateTime dt)
+        {
+            return new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, dt.Second, 0, dt.Kind);
         }
     }
 }
