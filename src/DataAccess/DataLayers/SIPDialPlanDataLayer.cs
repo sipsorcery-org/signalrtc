@@ -46,7 +46,7 @@ namespace devcall.DataAccess
             }
         }
 
-        public async Task UpdateDialPlanScript(string dialPlanScript)
+        public async Task<DateTime> UpdateDialPlanScript(string dialPlanScript)
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
@@ -56,6 +56,8 @@ namespace devcall.DataAccess
                 dialplan.LastUpdate = DateTime.UtcNow;
 
                 await db.SaveChangesAsync();
+
+                return dialplan.LastUpdate;
             }
         }
     }

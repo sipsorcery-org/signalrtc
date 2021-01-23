@@ -35,12 +35,13 @@ namespace devcall.Areas.Admin.Controllers
         public HomeController(
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
             IConfiguration config,
-            ILogger<HomeController> logger)
+            ILogger<HomeController> logger,
+            SIPDialPlanManager sipDialPlanManager)
         {
             _config = config;
             _logger = logger;
 
-            _sipDialPlanManager = new SIPDialPlanManager(dbContextFactory);
+            _sipDialPlanManager = sipDialPlanManager;
         }
 
         public async Task<IActionResult> Index()
@@ -58,7 +59,7 @@ namespace devcall.Areas.Admin.Controllers
 
             var script = dialPlanScript?.Trim();
 
-            string errMessage = _sipDialPlanManager.CompileDialPlan(script, null);
+            string errMessage = _sipDialPlanManager.CompileDialPlan(script);
 
             if (errMessage == null)
             {

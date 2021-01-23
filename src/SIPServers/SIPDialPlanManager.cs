@@ -89,7 +89,7 @@ public static class DialPlanScript
             return dialplan;
         }
 
-        public string CompileDialPlan(string dialplanScript, DateTime? lastUpdated)
+        public string CompileDialPlan(string dialplanScript)
         {
             try
             {
@@ -109,11 +109,6 @@ public static class DialPlanScript
 
                 var duration = DateTime.Now.Subtract(startTime);
                 _logger.LogInformation($"SIP DialPlan Manager successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
-
-                if (lastUpdated != null)
-                {
-                    _dialplanLastUpdated = lastUpdated.Value;
-                }
 
                 return null;
             }
@@ -137,10 +132,14 @@ public static class DialPlanScript
         {
             var dialplan = await LoadDialPlan();
 
+            //_logger.LogDebug($"Our dialplan last update {_dialplanLastUpdated}, database last update {dialplan.LastUpdate}.");
+
             if (dialplan != null && dialplan.LastUpdate > _dialplanLastUpdated)
             {
                 _logger.LogInformation($"SIP DialPlan Manager loading updated dialplan.");
-                CompileDialPlan(dialplan.DialPlanScript, dialplan.LastUpdate);
+                CompileDialPlan(dialplan.DialPlanScript);
+
+                _dialplanLastUpdated = dialplan.LastUpdate;
             }
 
             if (_dialPlanScriptRunner != null)
@@ -156,7 +155,7 @@ public static class DialPlanScript
 
         public async Task UpdateDialPlanScript(string dialPlanScript)
         {
-            await _sipDialPlanDataLayer.UpdateDialPlanScript(dialPlanScript);
+            _dialplanLastUpdated = await _sipDialPlanDataLayer.UpdateDialPlanScript(dialPlanScript);
         }
     }
 }
