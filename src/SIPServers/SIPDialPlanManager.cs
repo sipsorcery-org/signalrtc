@@ -107,6 +107,11 @@ public static class DialPlanScript
                    .ContinueWith("DialPlanScript.Lookup(UasTx, From)")
                    .CreateDelegate();
 
+                // Script compilations chew chunks of memory (approx 256MB for small dialplans). Not an issue for a dev machine but
+                // kills the Azure B1s virtual machines. By immediately collecting the memory from any previous script compilations 
+                // the intent is the memory usage spikes stay as low as possible.
+                GC.Collect();
+
                 var duration = DateTime.Now.Subtract(startTime);
                 _logger.LogInformation($"SIP DialPlan Manager successfully compiled dialplan in {duration.TotalMilliseconds:0.##}ms.");
 
