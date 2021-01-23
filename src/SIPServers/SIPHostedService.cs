@@ -49,7 +49,7 @@ namespace devcall
         private readonly X509Certificate2 _tlsCertificate;
 
         private SIPTransport _sipTransport;
-        private SIPDialPlanManager _sipDialPlan;
+        private SIPDialPlanManager _sipDialPlanManager;
         private RegistrarCore _registrarCore;
         private SIPRegistrarBindingsManager _bindingsManager;
         private SIPB2BUserAgentCore _b2bUserAgentCore;
@@ -67,22 +67,22 @@ namespace devcall
             ILogger<SIPHostedService> logger,
             IConfiguration config,
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
-            X509Certificate2 tlsCertificate)
+            X509Certificate2 tlsCertificate,
+            SIPDialPlanManager sipDialPlanManager)
         {
             _logger = logger;
             _config = config;
             _tlsCertificate = tlsCertificate;
+            _sipDialPlanManager = sipDialPlanManager;
 
             _sipTransport = new SIPTransport();
 
-            // Load dialplan script and make sure it can be compiled.
-            _sipDialPlan = new SIPDialPlanManager(dbContextFactory);
             _sipDomainManager = new SIPDomainManager(dbContextFactory);
             _sipDomainManager.Load().Wait();
 
             _bindingsManager = new SIPRegistrarBindingsManager(new SIPRegistrarBindingDataLayer(dbContextFactory), MAX_REGISTRAR_BINDINGS);
             _registrarCore = new RegistrarCore(_sipTransport, _bindingsManager, dbContextFactory, _sipDomainManager);
-            _b2bUserAgentCore = new SIPB2BUserAgentCore(_sipTransport, dbContextFactory, _sipDialPlan, _sipDomainManager);
+            _b2bUserAgentCore = new SIPB2BUserAgentCore(_sipTransport, dbContextFactory, _sipDialPlanManager, _sipDomainManager);
             _sipCallManager = new SIPCallManager(_sipTransport, null, dbContextFactory);
             _cdrDataLayer = new CDRDataLayer(dbContextFactory);
 
@@ -185,10 +185,10 @@ namespace devcall
             // Warm up the dialplan so it's ready for the first call.
             _ = Task.Run(async () =>
             {
-                var dp = await _sipDialPlan.LoadDialPlan();
+                var dp = await _sipDialPlanManager.LoadDialPlan();
                 if(dp != null)
                 {
-                    _sipDialPlan.CompileDialPlan(dp.DialPlanScript, dp.LastUpdate);
+                    _sipDialPlanManager.CompileDialPlan(dp.DialPlanScript, dp.LastUpdate);
                 }
             });
 

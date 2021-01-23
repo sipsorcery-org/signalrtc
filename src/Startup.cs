@@ -70,6 +70,7 @@ namespace devcall
                 services.AddSingleton(Program.TlsCertificate);
             }
 
+            services.AddSingleton(typeof(SIPDialPlanManager));
             services.AddSingleton(typeof(SIPHostedService));
             services.AddHostedService<SIPHostedService>();
 
