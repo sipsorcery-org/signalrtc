@@ -28,12 +28,6 @@ using devcall.DataAccess;
 
 namespace devcall
 {
-    public class SIPDialPlanGlobals
-    {
-        public UASInviteTransaction UasTx { get; set; }
-        public ISIPAccount From { get; set; }
-    }
-
     /// <summary>
     /// Loads a dialplan for the B2B user agent core from a database. The dialplan must be valid C#
     /// source and is compiled with Roslyn and executed for each incoming call.

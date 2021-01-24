@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>devcall</RootNamespace>
-    <AssemblyVersion>0.0.19.0</AssemblyVersion>
-    <Version>0.0.19</Version>
+    <AssemblyVersion>0.0.20.0</AssemblyVersion>
+    <Version>0.0.20</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -81,6 +81,10 @@
     <Folder Include="wwwroot\lib\jquery-validation\dist\" />
     <Folder Include="wwwroot\lib\jquery\" />
     <Folder Include="wwwroot\lib\jquery\dist\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SIPDialPlanGlobals\SIPDialPlanGlobals.csproj" />
   </ItemGroup>
 
 </Project>
