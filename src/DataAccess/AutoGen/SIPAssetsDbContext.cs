@@ -24,6 +24,7 @@ namespace devcall.DataAccess
         public virtual DbSet<SIPDomain> SIPDomains { get; set; }
         public virtual DbSet<SIPRegistrarBinding> SIPRegistrarBindings { get; set; }
         public virtual DbSet<SessionCache> SessionCaches { get; set; }
+        public virtual DbSet<WebRTCSignal> WebRTCSignals { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
@@ -278,6 +279,34 @@ namespace devcall.DataAccess
                     .UseCollation("SQL_Latin1_General_CP1_CS_AS");
 
                 entity.Property(e => e.Value).IsRequired();
+            });
+
+            modelBuilder.Entity<WebRTCSignal>(entity =>
+            {
+                entity.Property(e => e.ID).ValueGeneratedNever();
+
+                entity.Property(e => e.DeliveredAt).HasColumnType("datetime");
+
+                entity.Property(e => e.From)
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .IsUnicode(false);
+
+                entity.Property(e => e.Inserted).HasColumnType("datetime");
+
+                entity.Property(e => e.Signal)
+                    .IsRequired()
+                    .IsUnicode(false);
+
+                entity.Property(e => e.SignalType)
+                    .IsRequired()
+                    .HasMaxLength(16)
+                    .IsUnicode(false);
+
+                entity.Property(e => e.To)
+                    .IsRequired()
+                    .HasMaxLength(256)
+                    .IsUnicode(false);
             });
 
             OnModelCreatingPartial(modelBuilder);

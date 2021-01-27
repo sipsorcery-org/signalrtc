@@ -8,7 +8,7 @@
 // 
 // History:
 // 05 Jan 2021	Aaron Clauson	Created, Dublin, Ireland.
-// 09 Jan 2021  Aaron Clauson   Load dialplan from database instead of filesystem.
+// 09 Jan 2021  Aaron Clauson   Load dialplan from database instead of file system.
 //
 // License: 
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.

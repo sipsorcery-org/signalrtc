@@ -17,7 +17,6 @@ using System.IO;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,6 +30,7 @@ namespace devcall
     public class Startup
     {
         public const string COOKIE_SCHEME = "devcall";
+        public const string CORS_POLICY_NAME = "DevcallPolicy";
 
         public Startup(IConfiguration configuration)
         {
@@ -52,7 +52,8 @@ namespace devcall
             services.AddDbContext<SIPAssetsDbContext>(options =>
                 options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
 
-            services.AddDistributedSqlServerCache(opts => {
+            services.AddDistributedSqlServerCache(opts =>
+            {
                 opts.ConnectionString = Configuration.GetConnectionString("SIPAssets");
                 opts.SchemaName = "dbo";
                 opts.TableName = "SessionCache";
@@ -61,7 +62,7 @@ namespace devcall
             services.AddSession(options =>
             {
                 options.Cookie.HttpOnly = true;
-                options.Cookie.IsEssential = true;
+                options.Cookie.IsEssential = false;
                 options.Cookie.Name = COOKIE_SCHEME;
             });
 
@@ -73,6 +74,17 @@ namespace devcall
             services.AddSingleton(typeof(SIPDialPlanManager));
             services.AddSingleton(typeof(SIPHostedService));
             services.AddHostedService<SIPHostedService>();
+
+            services.AddCors(options =>
+            {
+                options.AddPolicy(name: CORS_POLICY_NAME,
+                    builder =>
+                    {
+                        builder.WithOrigins("*")
+                               .AllowAnyHeader()
+                                .AllowAnyMethod();
+                    });
+            });
 
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
@@ -103,9 +115,9 @@ namespace devcall
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "demo v1"));
             }
-
             app.UseHttpsRedirection();
             app.UseRouting();
+            app.UseCors();
             app.UseStaticFiles();
             app.UseSession();
             app.UseAuthentication();
@@ -118,7 +130,7 @@ namespace devcall
                     await context.Response.WriteAsync(Program.GetVersion());
                 });
 
-                endpoints.MapControllers();
+                endpoints.MapControllers().RequireCors(CORS_POLICY_NAME);
 
                 endpoints.MapControllerRoute(
                       name: "areas",

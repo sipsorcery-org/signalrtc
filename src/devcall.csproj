@@ -6,15 +6,16 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>devcall</RootNamespace>
-    <AssemblyVersion>0.0.20.0</AssemblyVersion>
-    <Version>0.0.20</Version>
+    <AssemblyVersion>0.0.21.0</AssemblyVersion>
+    <Version>0.0.21</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Controllers\api\**" />
-    <Content Remove="Controllers\api\**" />
-    <EmbeddedResource Remove="Controllers\api\**" />
-    <None Remove="Controllers\api\**" />
+    <Compile Remove="Controllers\api\CDRsController.cs" />
+    <Compile Remove="Controllers\api\SIPAccountsController.cs" />
+    <Compile Remove="Controllers\api\SIPCallsController.cs" />
+    <Compile Remove="Controllers\api\SIPDomainsController.cs" />
+    <Compile Remove="Controllers\api\SIPRegistrarBindingsController.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -52,7 +53,7 @@
     <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.22" />
     <PackageReference Include="Octokit" Version="0.48.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
-    <PackageReference Include="SIPSorcery" Version="5.0.12-pre" />
+    <PackageReference Include="SIPSorcery" Version="5.0.13-pre" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
   </ItemGroup>
 
@@ -68,7 +69,6 @@
   <ItemGroup>
     <Folder Include="Areas\Admin\Data\" />
     <Folder Include="Areas\Admin\Models\" />
-    <Folder Include="Controllers\" />
     <Folder Include="Data\" />
     <Folder Include="Models\" />
     <Folder Include="wwwroot\css\" />

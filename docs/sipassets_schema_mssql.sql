@@ -116,4 +116,16 @@ PRIMARY KEY CLUSTERED
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 
+create table WebRTCSignals
+(
+ ID uniqueidentifier not null,
+ "From" varchar(256) not null,
+ "To" varchar(256) not null,
+ SignalType varchar(16) not null,
+ Signal varchar(max) not null,
+ Inserted datetime not null,
+ DeliveredAt datetime null,
+ Primary Key(ID)
+);
+
 commit;
