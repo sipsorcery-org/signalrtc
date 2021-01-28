@@ -145,14 +145,17 @@ namespace devcall.Controllers.api
                 return BadRequest();
             }
 
-            await ExpireExisting(from, to);
+            if (sdp.type == RTCSdpType.offer)
+            {
+                await ExpireExisting(from, to);
+            }
 
             WebRTCSignal sdpSignal = new WebRTCSignal
             {
                 ID = Guid.NewGuid(),
                 To = to,
                 From = from,
-                SignalType = sdp.type.ToString(),
+                SignalType = WebRTCSignalTypesEnum.sdp.ToString(),
                 Signal = sdp.toJSON(),
                 Inserted = DateTime.UtcNow
             };
@@ -198,7 +201,7 @@ namespace devcall.Controllers.api
                 ID = Guid.NewGuid(),
                 To = to,
                 From = from,
-                SignalType = "ice",
+                SignalType = WebRTCSignalTypesEnum.ice.ToString(),
                 Signal = ice.toJSON(),
                 Inserted = DateTime.UtcNow
             };
@@ -211,24 +214,21 @@ namespace devcall.Controllers.api
         }
 
         /// <summary>
-        /// Expires any pending WebRTC signal messages for a WebRTC source and destination. The idea is that
-        /// a new SDP offer on answer invalidates any previous SDP and ICE messages.
+        /// Removes any pending WebRTC signal messages for a WebRTC source and destination. The idea is that
+        /// a new SDP offer invalidates any previous SDP and ICE messages.
         /// </summary>
         /// <param name="from">The identity of the peer that set the SDP offer or answer.</param>
         /// <param name="to">>The identity of the destination peer for the SDP offer or answer.</param>
         private async Task ExpireExisting(string from, string to)
         {
-            var existing = await _context.WebRTCSignals.Where(x => from.ToLower() == x.From.ToLower() &&
-                to.ToLower() == x.To.ToLower())
-               .ToListAsync();
+            var existing = await _context.WebRTCSignals.Where(x => 
+                (from.ToLower() == x.From.ToLower() && to.ToLower() == x.To.ToLower()) ||
+                 (to.ToLower() == x.From.ToLower() && from.ToLower() == x.To.ToLower()))
+               .ToArrayAsync();
 
-            if (existing?.Count > 0)
+            if (existing?.Length > 0)
             {
-                foreach(var signal in existing)
-                {
-                    signal.DeliveredAt = DateTime.UtcNow;
-                }
-
+                _context.RemoveRange(existing);
                 await _context.SaveChangesAsync();
             }
         }
