@@ -120,7 +120,7 @@ namespace devcall
                 app.UseHsts();
             }
 
-            //app.UseHttpsRedirection();
+            app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors();
             app.UseStaticFiles();

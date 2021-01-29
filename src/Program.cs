@@ -36,7 +36,7 @@ namespace devcall
         /// </summary>
         public static X509Certificate2 TlsCertificate { get; private set; }
 
-        // This configuration instnaces is made advailable early solely for the logging configuration.
+        // This configuration instances is made available early solely for the logging configuration.
         // It can be removed if the Serilog logger is configured programatically only.
         public static IConfiguration Configuration { get; } = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory())
@@ -111,7 +111,7 @@ namespace devcall
         /// Configures the Kestrel HTTPS end point. The mechanism is:
         /// - Get the port from appSettings to allow for easy changing,
         /// - Get the certificate from the Azure Key Vault to allow for centralisation and sharing
-        ///   amongst mutliple virtual machines.
+        ///   amongst multiple virtual machines.
         /// </summary>
         private static void ConfigureHttps(IWebHostBuilder webBuilder)
         {
