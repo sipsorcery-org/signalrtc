@@ -33,6 +33,7 @@ using SIPSorcery.SIP;
 
 namespace demo.Controllers
 {
+    [RequireHttps]
     public class HomeController : Controller
     {
         private const string SESSION_CSRF_KEY = "CSRF:State";

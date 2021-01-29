@@ -115,7 +115,12 @@ namespace devcall
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "demo v1"));
             }
-            app.UseHttpsRedirection();
+            else
+            {
+                app.UseHsts();
+            }
+
+            //app.UseHttpsRedirection();
             app.UseRouting();
             app.UseCors();
             app.UseStaticFiles();
