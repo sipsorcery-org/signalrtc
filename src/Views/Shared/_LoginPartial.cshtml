@@ -1,9 +1,16 @@
 ﻿@if (this.User?.Identity?.IsAuthenticated == true)
 {
-    <span class="navbar-text navbar-right">Logged in as: @User.Identity.Name</span>
+    <span class="navbar-text navbar-right">
+        Logged in as: @User.Identity.Name
+    </span>
+    <a class="nav-item nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Account" title="Account">Account</a>
+    @if (User.IsInRole("Admin"))
+    {
+        <a class="nav-item nav-link text-dark" asp-area="Admin" asp-controller="Home" asp-action="Index" title="Logout">Admin</a>
+    }
     <a class="nav-item nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Logout" title="Logout">Logout</a>
 }
 else
 {
-    <a class=""nav-item nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Login">Login</a>
+    <a class="" nav-item nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Login">Login</a>
 }

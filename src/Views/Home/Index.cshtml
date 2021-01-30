@@ -1,5 +1,10 @@
-﻿@{
+﻿@model string
+@{
     ViewData["Title"] = "Home";
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/lib/codemirror.css" />
 }
 
 @if (!string.IsNullOrWhiteSpace(TempData["Error"] as string))
@@ -16,6 +21,58 @@
     </div>
 }
 
-<p>Welcome to the Developer Call demonstration application.</p>
+<h1>Welcome</h1>
 
-<p>Click <a asp-action="Login">Login</a> to Create or Manage your complimentary SIP Account (note that a GitHub account is required to use this demo).</p>
+<p>Welcome to the SIPSorcery demonstration for the <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc">signalrtc</a> open source real-time communications VoIP and WebRTC signaling server.</p>
+
+<h1>Purpose</h1>
+
+<p>The purpose of this demonstration is to allow SIP and WebRTC experimentation and testing. It should not be used for production purposes.</p>
+
+<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to Create or Manage a free SIP Account.</p>
+
+<h1>SIP Features</h1>
+
+<p>The server supports the following functions for SIP clients:</p>
+
+<ul>
+    <li>Registrations.</li>
+    <li>Calls (see dial plan below).</li>
+    <li>OPTIONS requests for SIP pings.</li>
+</ul>
+
+<p>The call destinations supported are as below. The dial plan is stored in a database and is a compiled on demand using the <a target="_blank" href="https://github.com/dotnet/roslyn">Roslyn</a> .NET compiler.</p>
+
+<textarea id="dialPlanScript" name="dialPlanScript">
+@Model
+</textarea>
+
+<p>If you have a publicly accessible SIP end point that you'd like to add please create an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> with the URI details.</p>
+
+<h1>WebRTC Features</h1>
+
+<p>The server also supports a basic HTTP REST signalling mechanism for WebRTC peers. See this <a target="_blank" href="webrtc.html">page</a> for an example.</p>
+
+<h1>Additional Features</h1>
+
+<p>This demonstration application is hosted on Azure and is automatically deployed using Azure DevOps. Additional features can be added by submitting pull
+    requests to one of the open source projects below:</p>
+
+<ul>
+    <li><a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">sipsorcery</a>: For SIP, WebRTC and other protocol improvements.</li>
+    <li><a target="_blank" href="https://github.com/sipsorcery-org/signalrtc">signalrtc</a>: For improvements to the ASP.NET Core application and SIP Servers.</li>
+</ul>
+
+@section Scripts {
+    <script src="~/js/lib/codemirror.js"></script>
+    <script src="~/js/mode/clike/clike.js"></script>
+
+    <script>
+        var editor = CodeMirror.fromTextArea(document.getElementById("dialPlanScript"), {
+            lineNumbers: true,
+            matchBrackets: true,
+            mode: "text/x-csharp",
+            readOnly: true
+        });
+    </script>
+}

@@ -41,6 +41,7 @@ namespace signalrtc.Controllers
 
         private readonly SIPAccountDataLayer _sipAccountDataLayer;
         private readonly SIPRegistrarBindingDataLayer _sipRegBindingsDataLayer;
+        private readonly SIPDialPlanManager _sipDialPlanManager;
         private readonly IConfiguration _config;
         private readonly ILogger<HomeController> _logger;
 
@@ -52,12 +53,14 @@ namespace signalrtc.Controllers
         public HomeController(
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
             IConfiguration config,
-            ILogger<HomeController> logger)
+            ILogger<HomeController> logger,
+            SIPDialPlanManager sipDialPlanManager)
         {
             _config = config;
             _logger = logger;
             _sipAccountDataLayer = new SIPAccountDataLayer(dbContextFactory);
             _sipRegBindingsDataLayer = new SIPRegistrarBindingDataLayer(dbContextFactory);
+            _sipDialPlanManager = sipDialPlanManager;
 
             _sipDefaultDomain = config[ConfigKeys.SIP_DOMAIN];
             _githubAppName = config[ConfigKeys.GITHUB_OAUTH_APPNAME];
@@ -67,16 +70,20 @@ namespace signalrtc.Controllers
             _adminUsers = _config.GetSection(ConfigKeys.ADMIN_USERNAMES).Get<string[]>();
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
-            if (HttpContext.User?.Identity?.IsAuthenticated == true)
-            {
-                return RedirectToAction(nameof(Account));
-            }
-            else
-            {
-                return View();
-            }
+            //if (HttpContext.User?.Identity?.IsAuthenticated == true)
+            //{
+            //    return RedirectToAction(nameof(Account));
+            //}
+            //else
+            //{
+            //    return View();
+            //}
+
+            var dialplan = await _sipDialPlanManager.LoadDialPlan();
+
+            return View(nameof(Index), dialplan.DialPlanScript);
         }
 
         public IActionResult AccessDenied()
