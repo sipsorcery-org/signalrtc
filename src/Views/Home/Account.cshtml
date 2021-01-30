@@ -77,7 +77,54 @@ else
         </tbody>
     </table>
 
-    <a asp-action="Edit">Reset Password</a> 
-    <span>|</span> 
+    <a asp-action="Edit">Reset Password</a>
+    <span>|</span>
     <a asp-action="Delete" onclick="return confirm('Do you want to delete your SIP Account?')">Delete SIP Account</a>
+
+    <hr/>
+
+    <h2>Configuration Instructions</h2>
+
+    <p>In your SIP client the settings to use are:</p>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    Server
+                </th>
+                <th>
+                    Username (and )
+                </th>
+                <th>
+                    Password
+                </th>
+                <th>
+                    Realm (if reqd.)
+                </th>
+                <th>
+                    Auth User (if reqd.)
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+                <tr>
+                    <td>
+                        @ViewData["SIPDefaultDomain"]
+                    </td>
+                    <td>
+                        @User.Identity.Name
+                    </td>
+                    <td>
+                        Your Password
+                    </td>
+                    <td>
+                        @ViewData["SIPDefaultDomain"]
+                    </td>
+                    <td>
+                        @User.Identity.Name
+                    </td>
+                </tr>
+        </tbody>
+    </table>
 }

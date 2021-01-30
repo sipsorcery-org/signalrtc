@@ -29,7 +29,7 @@
 
 <p>The purpose of this demonstration is to allow SIP and WebRTC experimentation and testing. It should not be used for production purposes.</p>
 
-<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to Create or Manage a free SIP Account.</p>
+<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to access your free SIP Account.</p>
 
 <h1>SIP Features</h1>
 
@@ -43,9 +43,13 @@
 
 <p>The call destinations supported are as below. The dial plan is stored in a database and is a compiled on demand using the <a target="_blank" href="https://github.com/dotnet/roslyn">Roslyn</a> .NET compiler.</p>
 
+<hr/>
+
 <textarea id="dialPlanScript" name="dialPlanScript">
 @Model
 </textarea>
+
+<hr />
 
 <p>If you have a publicly accessible SIP end point that you'd like to add please create an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> with the URI details.</p>
 
@@ -55,12 +59,40 @@
 
 <h1>Additional Features</h1>
 
-<p>This demonstration application is hosted on Azure and is automatically deployed using Azure DevOps. Additional features can be added by submitting pull
-    requests to one of the open source projects below:</p>
+<p>
+    This demonstration application is hosted on Azure and is automatically deployed using Azure DevOps. Additional features can be added by submitting pull
+    requests to one of the open source projects below:
+</p>
 
 <ul>
     <li><a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">sipsorcery</a>: For SIP, WebRTC and other protocol improvements.</li>
     <li><a target="_blank" href="https://github.com/sipsorcery-org/signalrtc">signalrtc</a>: For improvements to the ASP.NET Core application and SIP Servers.</li>
+</ul>
+
+
+<h1>Additional Integrations</h1>
+
+<p>
+    The signalrtc application is, as the name implies, used for signaling only. To create and consume audio and video streams additional servers are needed.
+    Hosting additional servers can be done but adds to the hosting costs. If you would like to see a particular server integrated for experimentation or
+    testing feel free to open an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> and consider 
+    <a target="_blank" href="https://github.com/sponsors/sipsorcery"></a>sponsoring</a> the project to help with the costs.
+</p>
+
+<p>Currently the servers below are hosted and accessible via the dial plan:</p>
+
+<ul>
+    <li><a target="_blank" href="https://asterisk.org">Asterisk</a></li>
+</ul>
+
+<p>Additional servers that may be integrated depending on time, resources and interest:</p>
+
+<ul>
+    <li><a target="_blank" href="https://freeswitch.com/">FreeSWITCH</a></li>
+    <li><a target="_blank" href="https://janus.conf.meetecho.com/">Janus</a></li>
+    <li><a target="_blank" href="https://jitsi.org/">Jitsi</a></li>
+    <li><a target="_blank" href="https://www.kurento.org/">Kurento</a></li>
+    <li>Others, add an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a></li>
 </ul>
 
 @section Scripts {
