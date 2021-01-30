@@ -206,7 +206,8 @@ namespace signalrtc.Controllers
             if (ModelState.IsValid)
             {
                 _logger.LogInformation($"Attempting to create new SIP account for {User.Identity.Name}@{_sipDefaultDomain}.");
-                var newAccount = await _sipAccountDataLayer.Create(User.Identity.Name, _sipDefaultDomain, "password");
+                var passwordHash = HTTPDigest.DigestCalcHA1(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword);
+                var newAccount = await _sipAccountDataLayer.Create(User.Identity.Name, _sipDefaultDomain, passwordHash);
                 TempData["Success"] = $"SIP account successfully created for username {newAccount.AOR}.";
                 return RedirectToAction(nameof(Account));
             }
@@ -215,8 +216,7 @@ namespace signalrtc.Controllers
                 var presetSIPAccount = new SIPAccount
                 {
                     Domain = new SIPDomain { Domain = _sipDefaultDomain },
-                    SIPUsername = User.Identity.Name,
-                    SIPPassword = HTTPDigest.DigestCalcHA1(User.Identity.Name, _sipDefaultDomain, sipAccount.SIPPassword)
+                    SIPUsername = User.Identity.Name
                 };
                 return View(sipAccount);
             }
