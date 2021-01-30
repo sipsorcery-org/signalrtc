@@ -18,7 +18,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public class SIPCallDataLayer
     {

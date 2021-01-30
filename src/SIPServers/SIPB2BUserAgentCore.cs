@@ -26,9 +26,9 @@ using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
 using SIPSorcery.Sys;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     /// <summary>
     /// This class acts as a server agent that processes incoming calls (INVITE requests)

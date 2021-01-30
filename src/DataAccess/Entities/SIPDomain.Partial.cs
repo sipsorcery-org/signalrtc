@@ -19,7 +19,7 @@ using System.Collections.Generic;
 
 #nullable disable
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public partial class SIPDomain
     {

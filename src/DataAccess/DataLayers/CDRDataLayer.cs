@@ -19,7 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public class CDRDataLayer
     {

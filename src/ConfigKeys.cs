@@ -13,7 +13,7 @@
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
 //-----------------------------------------------------------------------------
 
-namespace devcall
+namespace signalrtc
 {
     /// <summary>
     /// Convenience class to hold the keys that are used to get configuration settings from

@@ -20,9 +20,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall.Areas.Admin.Controllers
+namespace signalrtc.Areas.Admin.Controllers
 {
     [Area("Admin")]
     [Authorize(Roles ="Admin")]

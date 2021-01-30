@@ -8,16 +8,16 @@ EXPOSE 5060
 
 FROM mcr.microsoft.com/dotnet/sdk:5.0-buster-slim AS build
 WORKDIR /src
-COPY ["devcall.csproj", ""]
-RUN dotnet restore "./devcall.csproj"
+COPY ["signalrtc.csproj", ""]
+RUN dotnet restore "./signalrtc.csproj"
 COPY . .
 WORKDIR "/src/."
-RUN dotnet build "devcall.csproj" -c Release -o /app/build
+RUN dotnet build "signalrtc.csproj" -c Release -o /app/build
 
 FROM build AS publish
-RUN dotnet publish "devcall.csproj" -c Release -o /app/publish
+RUN dotnet publish "signalrtc.csproj" -c Release -o /app/publish
 
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-ENTRYPOINT ["dotnet", "devcall.dll"]
+ENTRYPOINT ["dotnet", "signalrtc.dll"]

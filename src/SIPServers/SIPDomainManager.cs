@@ -23,9 +23,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     /// <summary>
     /// This class maintains a list of domains that are being maintained by this process.

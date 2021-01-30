@@ -22,9 +22,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.Net;
 using SIPSorcery.SIP;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     public class SIPCallManager
     {

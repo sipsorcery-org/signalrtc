@@ -19,7 +19,7 @@ using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using SIPSorcery.SIP;
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public class SIPRegistrarBindingDataLayer
     {

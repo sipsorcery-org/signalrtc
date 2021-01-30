@@ -27,9 +27,9 @@ using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
 using SIPSorcery.Sys;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     public enum RegisterResultEnum
     {

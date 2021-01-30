@@ -5,7 +5,7 @@
     <UserSecretsId>d741701b-eaeb-4734-8ee0-2966a1405fd4</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
-    <RootNamespace>devcall</RootNamespace>
+    <RootNamespace>signalrtc</RootNamespace>
     <AssemblyVersion>0.0.23.0</AssemblyVersion>
     <Version>0.0.23</Version>
   </PropertyGroup>

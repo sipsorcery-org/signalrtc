@@ -22,10 +22,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 using SIPSorcery.Net;
 
-namespace devcall.Controllers.api
+namespace signalrtc.Controllers.api
 {
     [EnableCors(Startup.CORS_POLICY_NAME)]
     [Route("api/[controller]")]

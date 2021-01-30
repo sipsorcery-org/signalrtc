@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 #nullable disable
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public partial class SIPAssetsDbContext : DbContext
     {

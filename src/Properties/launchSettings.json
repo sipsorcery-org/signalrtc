@@ -17,7 +17,7 @@
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
     },
-    "devcall": {
+    "signalrtc": {
       "commandName": "Project",
       "launchUrl": "swagger",
       "environmentVariables": {

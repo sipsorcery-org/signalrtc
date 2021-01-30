@@ -20,7 +20,7 @@ using SIPSorcery.SIP;
 
 #nullable disable
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     public partial class CDR
     {

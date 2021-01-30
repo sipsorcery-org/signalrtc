@@ -21,9 +21,9 @@ using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     public class SIPRegistrarBindingsManager
     {

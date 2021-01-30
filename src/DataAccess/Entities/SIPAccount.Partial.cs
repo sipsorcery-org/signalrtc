@@ -22,7 +22,7 @@ using SIPSorcery.SIP.App;
 
 #nullable disable
 
-namespace devcall.DataAccess
+namespace signalrtc.DataAccess
 {
     [ModelMetadataType(typeof(SIPAccountMetadata))]
     public partial class SIPAccount : ISIPAccount

@@ -27,7 +27,7 @@ using Azure.Security.KeyVault.Secrets;
 using Serilog;
 using Serilog.Extensions.Logging;
 
-namespace devcall
+namespace signalrtc
 {
     public class Program
     {
@@ -56,7 +56,7 @@ namespace devcall
             .WriteTo.Console()
             .CreateLogger();
 
-            Log.Logger.Information($"Starting devcall server version {GetVersion()}...");
+            Log.Logger.Information($"Starting signalrtc server version {GetVersion()}...");
 
             var factory = new SerilogLoggerFactory(Log.Logger);
             SIPSorcery.LogFactory.Set(factory);

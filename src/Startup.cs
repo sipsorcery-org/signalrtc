@@ -23,14 +23,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     public class Startup
     {
-        public const string COOKIE_SCHEME = "devcall";
-        public const string CORS_POLICY_NAME = "DevcallPolicy";
+        public const string COOKIE_SCHEME = "signalrtc";
+        public const string CORS_POLICY_NAME = "SignalRTCPolicy";
 
         public Startup(IConfiguration configuration)
         {
@@ -92,7 +92,7 @@ namespace devcall
             );
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "devcall", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "signalrtc", Version = "v1" });
             });
 
             services.AddControllersWithViews();

@@ -28,9 +28,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.Sys;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 
-namespace devcall
+namespace signalrtc
 {
     /// <summary>
     /// A hosted service to manage a SIP transport layer. This class is designed to be a long running

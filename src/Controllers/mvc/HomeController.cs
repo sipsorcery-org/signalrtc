@@ -27,11 +27,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Octokit;
-using devcall;
-using devcall.DataAccess;
+using signalrtc.DataAccess;
 using SIPSorcery.SIP;
 
-namespace demo.Controllers
+namespace signalrtc.Controllers
 {
     [RequireHttps]
     public class HomeController : Controller
