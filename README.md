@@ -1,9 +1,9 @@
-# devcall
-Real-time call signalling server for developer to developer calls
+# signalrtc
+Real-time communications signalling server for VoIP and WebRTC.
 
-Visit [devcall.sipsorcery.com](https://devcall.sipsorcery.com) to set up a SIP account.
+Visit [sipsorcery.cloud](https://sipsorcery.cloud) for a live demonstration.
 
-Dialplan:
+Example Dialplan:
 
 ````
 var inUri = uasTx.TransactionRequestURI; 
