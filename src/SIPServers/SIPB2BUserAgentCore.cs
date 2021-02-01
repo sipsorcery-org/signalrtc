@@ -17,15 +17,12 @@
 
 using System;
 using System.Collections.Concurrent;
-using System.Net;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
-using SIPSorcery.Sys;
 using signalrtc.DataAccess;
 
 namespace signalrtc
@@ -61,12 +58,12 @@ namespace signalrtc
         private SIPDomainManager _sipDomainManager;
 
         public SIPB2BUserAgentCore(
-            SIPTransport sipTransport, 
+            SIPTransport sipTransport,
             IDbContextFactory<SIPAssetsDbContext> dbContextFactory,
             SIPDialPlanManager sipDialPlan,
             SIPDomainManager sipDomainManager)
         {
-            if(sipTransport == null)
+            if (sipTransport == null)
             {
                 throw new ArgumentNullException(nameof(sipTransport));
             }
@@ -84,18 +81,16 @@ namespace signalrtc
 
             for (int index = 1; index <= threadCount; index++)
             {
-                string threadSuffix = index.ToString();
-                ThreadPool.QueueUserWorkItem(delegate { ProcessInviteRequest(B2BUA_THREAD_NAME_PREFIX + threadSuffix); });
+                int i = index;
+                Thread thread = new Thread(() => ProcessInviteRequest($"{B2BUA_THREAD_NAME_PREFIX}-{i}"));
+                thread.Start();
             }
         }
 
         public void Stop()
         {
-            if (!_exit)
-            {
-                _exit = true;
-                Logger.LogInformation("SIPB2BUserAgentCore Stop called.");
-            }
+            _exit = true;
+            _inviteARE.Set();
         }
 
         public void AddInviteRequest(SIPRequest inviteRequest)
@@ -128,43 +123,29 @@ namespace signalrtc
 
         private void ProcessInviteRequest(string threadName)
         {
-            try
-            {
-                Thread.CurrentThread.Name = threadName;
+            Thread.CurrentThread.Name = threadName;
 
-                while (!_exit)
+            while (!_exit)
+            {
+                if (_inviteQueue.Count > 0)
                 {
-                    if (_inviteQueue.Count > 0)
+                    if (_inviteQueue.TryDequeue(out var uasTransaction))
                     {
-                        try
+                        var sipAccount = GetCaller(uasTransaction).Result;
+
+                        if (uasTransaction.TransactionFinalResponse == null)
                         {
-                            if (_inviteQueue.TryDequeue(out var uasTransaction))
-                            {
-                                var sipAccount = GetCaller(uasTransaction).Result;
-                                
-                                if (uasTransaction.TransactionFinalResponse == null)
-                                {
-                                    Forward(uasTransaction, sipAccount).Wait();
-                                }
-                            }
+                            Forward(uasTransaction, sipAccount).Wait();
                         }
-                        catch (Exception invExcp)
-                        {
-                            Logger.LogError("Exception ProcessInviteRequest Job. " + invExcp.Message);
-                        }
-                    }
-                    else
-                    {
-                        _inviteARE.WaitOne(MAX_PROCESS_INVITE_SLEEP);
                     }
                 }
+                else if (!_exit)
+                {
+                    _inviteARE.WaitOne(MAX_PROCESS_INVITE_SLEEP);
+                }
+            }
 
-                Logger.LogWarning("ProcessInviteRequest thread " + Thread.CurrentThread.Name + " stopping.");
-            }
-            catch (Exception excp)
-            {
-                Logger.LogError("Exception ProcessInviteRequest (" + Thread.CurrentThread.Name + "). " + excp);
-            }
+            Logger.LogWarning("ProcessInviteRequest thread " + Thread.CurrentThread.Name + " stopping.");
         }
 
         /// <summary>
@@ -197,8 +178,8 @@ namespace signalrtc
                     Logger.LogDebug($"B2B incoming caller was for hosted domain {canonicalDomain}, looking up caller for {invReq.Header.From.FromURI.User}.");
 
                     var sipAccount = await _sipAccountDataLayer.GetSIPAccount(invReq.Header.From.FromURI.User, canonicalDomain);
-                    
-                    if(sipAccount == null)
+
+                    if (sipAccount == null)
                     {
                         Logger.LogWarning($"B2B no SIP account found for caller {invReq.Header.From.FromURI.User}@{canonicalDomain}, rejecting.");
                         uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.Forbidden, null));

@@ -1,5 +1,5 @@
 // ============================================================================
-// FileName: RegistrarCore.cs
+// FileName: SIPRegistrarCore.cs
 //
 // Description:
 // RFC3822 compliant SIP Registrar.
@@ -26,7 +26,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
-using SIPSorcery.Sys;
 using signalrtc.DataAccess;
 
 namespace signalrtc
@@ -61,8 +60,8 @@ namespace signalrtc
     ///   The To header field and the Request-URI field typically differ, as the former contains a user name. 
     /// 
     /// [ed Therefore:
-    /// - The Request-URI inidcates the domain for the registration and should match the domain in the To address of record.
-    /// - The To address of record contians the username of the user that is attempting to authenticate the request.]
+    /// - The Request-URI indicates the domain for the registration and should match the domain in the To address of record.
+    /// - The To address of record contains the username of the user that is attempting to authenticate the request.]
     /// 
     /// Method of operation:
     ///  - New SIP messages received by the SIP Transport layer and queued before being sent to RegistrarCode for processing. For requests
@@ -92,6 +91,7 @@ namespace signalrtc
         private string m_serverAgent = SIPConstants.SIP_USERAGENT_STRING;
         private ConcurrentQueue<SIPNonInviteTransaction> m_registerQueue = new ConcurrentQueue<SIPNonInviteTransaction>();
         private AutoResetEvent m_registerARE = new AutoResetEvent(false);
+        private bool _exit = false;
 
         public event Action<double, bool> RegisterComplete;     // Event to allow hook into get notifications about the processing time for registrations. The boolean parameter is true of the request contained an authentication header.
 
@@ -99,8 +99,6 @@ namespace signalrtc
         {
             get { return m_registerQueue.Count; }
         }
-
-        public bool Stop;
 
         public RegistrarCore(
             SIPTransport sipTransport,
@@ -123,111 +121,79 @@ namespace signalrtc
 
             for (int index = 1; index <= threadCount; index++)
             {
-                string threadSuffix = index.ToString();
-                ThreadPool.QueueUserWorkItem(delegate { ProcessRegisterRequest(REGISTRAR_THREAD_NAME_PREFIX + threadSuffix); });
+                int i = index;
+                Thread thread = new Thread(() => ProcessRegisterRequest($"{REGISTRAR_THREAD_NAME_PREFIX}-{i}"));
+                thread.Start();
             }
+        }
+
+        public void Stop()
+        {
+            _exit = true;
+            m_registerARE.Set();
         }
 
         public void AddRegisterRequest(SIPEndPoint localSIPEndPoint, SIPEndPoint remoteEndPoint, SIPRequest registerRequest)
         {
-            try
+            if (registerRequest.Method != SIPMethodsEnum.REGISTER)
             {
-                if (registerRequest.Method != SIPMethodsEnum.REGISTER)
+                SIPResponse notSupportedResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.MethodNotAllowed, "Registration requests only");
+                m_sipTransport.SendResponseAsync(notSupportedResponse).Wait();
+            }
+            else
+            {
+                int requestedExpiry = GetRequestedExpiry(registerRequest);
+
+                if (requestedExpiry > 0 && requestedExpiry < m_minimumBindingExpiry)
                 {
-                    SIPResponse notSupportedResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.MethodNotAllowed, "Registration requests only");
-                    m_sipTransport.SendResponseAsync(notSupportedResponse).Wait();
+                    Logger.LogDebug("Bad register request, no expiry of " + requestedExpiry + " to small from " + remoteEndPoint + ".");
+                    SIPResponse tooFrequentResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.IntervalTooBrief, null);
+                    tooFrequentResponse.Header.MinExpires = m_minimumBindingExpiry;
+                    m_sipTransport.SendResponseAsync(tooFrequentResponse).Wait();
                 }
                 else
                 {
-                    int requestedExpiry = GetRequestedExpiry(registerRequest);
-
-                    if (registerRequest.Header.To == null)
+                    if (m_registerQueue.Count < MAX_REGISTER_QUEUE_SIZE)
                     {
-                        Logger.LogDebug("Bad register request, no To header from " + remoteEndPoint + ".");
-                        SIPResponse badReqResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.BadRequest, "Missing To header");
-                        m_sipTransport.SendResponseAsync(badReqResponse).Wait();
-                    }
-                    else if (registerRequest.Header.To.ToURI.User.IsNullOrBlank())
-                    {
-                        Logger.LogDebug("Bad register request, no To user from " + remoteEndPoint + ".");
-                        SIPResponse badReqResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.BadRequest, "Missing username on To header");
-                        m_sipTransport.SendResponseAsync(badReqResponse).Wait();
-                    }
-                    else if (registerRequest.Header.Contact == null || registerRequest.Header.Contact.Count == 0)
-                    {
-                        Logger.LogDebug("Bad register request, no Contact header from " + remoteEndPoint + ".");
-                        SIPResponse badReqResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.BadRequest, "Missing Contact header");
-                        m_sipTransport.SendResponseAsync(badReqResponse).Wait();
-                    }
-                    else if (requestedExpiry > 0 && requestedExpiry < m_minimumBindingExpiry)
-                    {
-                        Logger.LogDebug("Bad register request, no expiry of " + requestedExpiry + " to small from " + remoteEndPoint + ".");
-                        SIPResponse tooFrequentResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.IntervalTooBrief, null);
-                        tooFrequentResponse.Header.MinExpires = m_minimumBindingExpiry;
-                        m_sipTransport.SendResponseAsync(tooFrequentResponse).Wait();
+                        SIPNonInviteTransaction regTx = new SIPNonInviteTransaction(m_sipTransport, registerRequest, null);
+                        m_registerQueue.Enqueue(regTx);
                     }
                     else
                     {
-                        if (m_registerQueue.Count < MAX_REGISTER_QUEUE_SIZE)
-                        {
-                            SIPNonInviteTransaction regTx = new SIPNonInviteTransaction(m_sipTransport, registerRequest, null);
-                            m_registerQueue.Enqueue(regTx);
-                        }
-                        else
-                        {
-                            Logger.LogError("Register queue exceeded max queue size " + MAX_REGISTER_QUEUE_SIZE + ", overloaded response sent.");
-                            SIPResponse overloadedResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.TemporarilyUnavailable, "Registrar overloaded, please try again shortly");
-                            m_sipTransport.SendResponseAsync(overloadedResponse).Wait();
-                        }
-
-                        m_registerARE.Set();
+                        Logger.LogError("Register queue exceeded maximum queue size " + MAX_REGISTER_QUEUE_SIZE + ", overloaded response sent.");
+                        SIPResponse overloadedResponse = SIPResponse.GetResponse(registerRequest, SIPResponseStatusCodesEnum.TemporarilyUnavailable, "Registrar overloaded, please try again shortly");
+                        m_sipTransport.SendResponseAsync(overloadedResponse).Wait();
                     }
+
+                    m_registerARE.Set();
                 }
-            }
-            catch (Exception excp)
-            {
-                Logger.LogError("Exception AddRegisterRequest (" + remoteEndPoint.ToString() + "). " + excp.Message);
             }
         }
 
         private void ProcessRegisterRequest(string threadName)
         {
-            try
+            Thread.CurrentThread.Name = threadName;
+
+            while (!_exit)
             {
-                Thread.CurrentThread.Name = threadName;
-
-                while (!Stop)
+                if (m_registerQueue.Count > 0)
                 {
-                    if (m_registerQueue.Count > 0)
+                    if (m_registerQueue.TryDequeue(out var registrarTransaction))
                     {
-                        try
-                        {
-                            if (m_registerQueue.TryDequeue(out var registrarTransaction))
-                            {
-                                DateTime startTime = DateTime.Now;
-                                RegisterResultEnum result = Register(registrarTransaction);
-                                TimeSpan duration = DateTime.Now.Subtract(startTime);
+                        DateTime startTime = DateTime.Now;
+                        RegisterResultEnum result = Register(registrarTransaction);
+                        TimeSpan duration = DateTime.Now.Subtract(startTime);
 
-                                RegisterComplete?.Invoke(duration.TotalMilliseconds, registrarTransaction.TransactionRequest.Header.AuthenticationHeader != null);
-                            }
-                        }
-                        catch (Exception regExcp)
-                        {
-                            Logger.LogError("Exception ProcessRegisterRequest Register Job. " + regExcp.Message);
-                        }
-                    }
-                    else
-                    {
-                        m_registerARE.WaitOne(MAX_PROCESS_REGISTER_SLEEP);
+                        RegisterComplete?.Invoke(duration.TotalMilliseconds, registrarTransaction.TransactionRequest.Header.AuthenticationHeader != null);
                     }
                 }
+                else if (!_exit)
+                {
+                    m_registerARE.WaitOne(MAX_PROCESS_REGISTER_SLEEP);
+                }
+            }
 
-                Logger.LogWarning("ProcessRegisterRequest thread " + Thread.CurrentThread.Name + " stopping.");
-            }
-            catch (Exception excp)
-            {
-                Logger.LogError("Exception ProcessRegisterRequest (" + Thread.CurrentThread.Name + "). " + excp);
-            }
+            Logger.LogWarning($"ProcessRegisterRequest thread {Thread.CurrentThread.Name} stopping.");
         }
 
         private int GetRequestedExpiry(SIPRequest registerRequest)

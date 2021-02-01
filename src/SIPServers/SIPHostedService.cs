@@ -1,7 +1,7 @@
 ﻿//-----------------------------------------------------------------------------
 // Filename: SIPHostedService.cs
 //
-// Description: This class is designed to act as a singleton in an ASP.Net
+// Description: This class is designed to act as a singleton in an ASP.Net Core
 // server application to manage the SIP transport and server cores. 
 //
 // Author(s):
@@ -27,7 +27,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
-using SIPSorcery.Sys;
 using signalrtc.DataAccess;
 
 namespace signalrtc
@@ -43,6 +42,7 @@ namespace signalrtc
         public const int MAX_REGISTRAR_BINDINGS = 10;
         public const int REGISTRAR_CORE_WORKER_THREADS = 1;
         public const int B2BUA_CORE_WORKER_THREADS = 1;
+        public const int SUBSCRIBER_CORE_WORKER_THREADS = 1;
 
         private readonly ILogger<SIPHostedService> _logger;
         private readonly IConfiguration _config;
@@ -56,6 +56,7 @@ namespace signalrtc
         private SIPCallManager _sipCallManager;
         private CDRDataLayer _cdrDataLayer;
         private SIPDomainManager _sipDomainManager;
+        private SIPSubscriberCore _subscriberCore;
 
         // Fields for setting the Contact header in SIP messages.
         public string _publicContactHostname;
@@ -85,6 +86,7 @@ namespace signalrtc
             _b2bUserAgentCore = new SIPB2BUserAgentCore(_sipTransport, dbContextFactory, _sipDialPlanManager, _sipDomainManager);
             _sipCallManager = new SIPCallManager(_sipTransport, null, dbContextFactory);
             _cdrDataLayer = new CDRDataLayer(dbContextFactory);
+            _subscriberCore = new SIPSubscriberCore(_sipTransport, dbContextFactory, _sipDomainManager);
 
             SIPCDR.CDRCreated += _cdrDataLayer.Add;
             SIPCDR.CDRAnswered += _cdrDataLayer.Update;
@@ -96,11 +98,11 @@ namespace signalrtc
         {
             _logger.LogDebug("SIP hosted service starting...");
 
-            // Get application config settings.
+            // Get application configuration settings.
             int listenPort = _config.GetValue<int>(ConfigKeys.SIP_LISTEN_PORT, DEFAULT_SIP_LISTEN_PORT);
             int tlsListenPort = _config.GetValue<int>(ConfigKeys.SIP_TLS_LISTEN_PORT, DEFAULT_SIPS_LISTEN_PORT);
 
-            // Set the fields sed for setting the SIP Contact header.
+            // Set the fields used for setting the SIP Contact header.
             _publicContactHostname = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_HOSTNAME, null);
             IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV4, null), out _publicContactIPv4);
             IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV6, null), out _publicContactIPv6);
@@ -149,23 +151,25 @@ namespace signalrtc
             }
 
             // Create SIP channels.
-            if (_tlsCertificate != null)
-            {
-                _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, tlsListenPort)));
-            }
-
-            _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
-            _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
-
             if(Socket.OSSupportsIPv6)
             {
                 if (_tlsCertificate != null)
                 {
-                    _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.IPv6Any, tlsListenPort)));
+                    _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.IPv6Any, tlsListenPort), true));
                 }
 
-                _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort)));
-                _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort)));
+                _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort), true));
+                _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.IPv6Any, listenPort), true));
+            }
+            else
+            {
+                if (_tlsCertificate != null)
+                {
+                    _sipTransport.AddSIPChannel(new SIPTLSChannel(_tlsCertificate, new IPEndPoint(IPAddress.Any, tlsListenPort)));
+                }
+
+                _sipTransport.AddSIPChannel(new SIPUDPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
+                _sipTransport.AddSIPChannel(new SIPTCPChannel(new IPEndPoint(IPAddress.Any, listenPort)));
             }
 
             var listeningEP = _sipTransport.GetSIPChannels().First().ListeningSIPEndPoint;
@@ -179,6 +183,7 @@ namespace signalrtc
             _bindingsManager.Start();
             _registrarCore.Start(REGISTRAR_CORE_WORKER_THREADS);
             _b2bUserAgentCore.Start(B2BUA_CORE_WORKER_THREADS);
+            _subscriberCore.Start(SUBSCRIBER_CORE_WORKER_THREADS);
 
             _sipTransport.SIPTransportRequestReceived += OnRequest;
 
@@ -199,8 +204,9 @@ namespace signalrtc
         {
             _logger.LogDebug("SIP hosted service stopping...");
 
+            _registrarCore.Stop();
+            _subscriberCore.Stop();
             _b2bUserAgentCore.Stop();
-            _registrarCore.Stop = true;
             _bindingsManager.Stop();
 
             _sipTransport?.Shutdown();
@@ -234,8 +240,11 @@ namespace signalrtc
                             break;
 
                         case SIPMethodsEnum.INVITE:
-                            _logger.LogInformation($"Incoming call request: {localSIPEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
-                            _b2bUserAgentCore.AddInviteRequest(sipRequest);
+                            if (!await WasRejected(sipRequest))
+                            {
+                                _logger.LogInformation($"Incoming call request: {localSIPEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
+                                _b2bUserAgentCore.AddInviteRequest(sipRequest);
+                            }
                             break;
 
                         case SIPMethodsEnum.OPTIONS:
@@ -244,7 +253,17 @@ namespace signalrtc
                             break;
 
                         case SIPMethodsEnum.REGISTER:
-                            _registrarCore.AddRegisterRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                            if (!await WasRejected(sipRequest))
+                            {
+                                _registrarCore.AddRegisterRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                            }
+                            break;
+
+                        case SIPMethodsEnum.SUBSCRIBE:
+                            if (!await WasRejected(sipRequest))
+                            {
+                                _subscriberCore.AddSubscribeRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                            }
                             break;
 
                         default:
@@ -261,8 +280,39 @@ namespace signalrtc
         }
 
         /// <summary>
+        /// Apply verification logic to incoming requests and reject if invalid. Note the verification
+        /// rules here do not suit all requests. The rules are suitable for requests that are likely
+        /// to require authentication such as INVITE, REGISTER, SUBSCRIBE etc.
+        /// </summary>
+        /// <param name="req">The incoming SIP request to check.</param>
+        /// <returns>True if the request failed validation and was rejected. False if the request is valid.</returns>
+        private async Task<bool> WasRejected(SIPRequest req)
+        {
+            var errorMessge = req switch
+            {
+                var x when x.Header.To == null => "Missing To header",
+                var x when string.IsNullOrWhiteSpace(x.Header.To.ToURI.User) => "Missing username on To header",
+                var x when x.Header.From == null || x.Header.From.FromURI == null => "Missing From header URI",
+                var x when string.IsNullOrWhiteSpace(x.Header.From.FromURI.User) => "Missing username on From header",
+                var x when x.Header.Contact == null || x.Header.Contact.Count == 0 => "Missing Contact header",
+                _ => null
+            };
+
+            if(errorMessge != null)
+            {
+                SIPResponse errResponse = SIPResponse.GetResponse(req, SIPResponseStatusCodesEnum.BadRequest, errorMessge);
+                await _sipTransport.SendResponseAsync(errResponse);
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
         /// This customisation method is used because a one sized fits all "Contact Host" does not work
-        /// for forwardings calls when the server can be on either side of the load balancer.
+        /// for forwarding calls when the server can be on either side of the load balancer.
         /// </summary>
         /// <param name="localEP">The local end point that's been chosen by the transport layer to
         /// send this request with.</param>
@@ -281,7 +331,7 @@ namespace signalrtc
 
         /// <summary>
         /// This customisation method is used because a one sized fits all "Contact Host" does not work
-        /// for forwardings calls when the server can be on either side of the load balancer.
+        /// for forwarding calls when the server can be on either side of the load balancer.
         /// </summary>
         /// <param name="localEP">The local end point that's been chosen by the transport layer to
         /// send this response with.</param>
@@ -312,7 +362,7 @@ namespace signalrtc
             if (!_isPrivateSubnet(dstAddress) && inviteHeader.Contact != null && inviteHeader.Contact.Count == 1)
             {
                 // The priority is use the public IP address fields if they are available (saves DNS lookups) and
-                // fallback to the hostname if they are not.
+                // falls back to the hostname if they are not.
 
                 // Port of 0 is set when user agents set Contact Host to "0.0.0.0:0" which is the method to
                 // get the transport layer to set it at send time.
