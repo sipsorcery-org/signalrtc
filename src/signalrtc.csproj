@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>signalrtc</RootNamespace>
-    <AssemblyVersion>0.0.28.0</AssemblyVersion>
-    <Version>0.0.28</Version>
+    <AssemblyVersion>0.0.29.0</AssemblyVersion>
+    <Version>0.0.29</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -53,7 +53,7 @@
     <PackageReference Include="MySql.Data.EntityFrameworkCore" Version="8.0.22" />
     <PackageReference Include="Octokit" Version="0.48.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
-    <PackageReference Include="SIPSorcery" Version="5.0.15-pre" />
+    <PackageReference Include="SIPSorcery" Version="5.0.17-pre" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
   </ItemGroup>
 

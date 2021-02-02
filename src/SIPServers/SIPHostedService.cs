@@ -249,6 +249,8 @@ namespace signalrtc
 
                         case SIPMethodsEnum.OPTIONS:
                             SIPResponse optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
+                            optionsResponse.Header.Contact = new List<SIPContactHeader> { SIPContactHeader.GetDefaultSIPContactHeader(sipRequest.URI.Scheme) };
+                            optionsResponse.Header.Server = SIPConstants.SIP_USERAGENT_STRING;
                             await _sipTransport.SendResponseAsync(optionsResponse);
                             break;
 
@@ -368,7 +370,8 @@ namespace signalrtc
                 // get the transport layer to set it at send time.
                 bool isDefaultPort = inviteHeader.Contact[0].ContactURI.IsDefaultPort() || inviteHeader.Contact[0].ContactURI.HostPort == "0";
 
-                if (dstAddress.AddressFamily == AddressFamily.InterNetwork && _publicContactIPv4 != null)
+                if (_publicContactIPv4 != null &&
+                    (dstAddress.AddressFamily == AddressFamily.InterNetwork || dstAddress.IsIPv4MappedToIPv6))
                 {
                     var copy = inviteHeader.Copy();
                     copy.Contact[0].ContactURI.Host = isDefaultPort ? _publicContactIPv4.ToString() : $"{_publicContactIPv4}:{inviteHeader.Contact[0].ContactURI.HostPort}";
