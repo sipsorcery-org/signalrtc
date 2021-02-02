@@ -343,7 +343,7 @@ namespace signalrtc
         /// is returned otherwise null to indicate the original SIP header object can be used.</returns>
         private SIPHeader CustomiseContact(SIPEndPoint localEP, SIPEndPoint dstEP, SIPResponse response)
         {
-            if (response.Header.CSeqMethod == SIPMethodsEnum.INVITE)
+            if (response.Header.CSeqMethod == SIPMethodsEnum.INVITE || response.Header.CSeqMethod == SIPMethodsEnum.OPTIONS)
             {
                 return CustomiseInviteContactHeader(dstEP, response.Header);
             }
