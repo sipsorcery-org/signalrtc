@@ -216,7 +216,11 @@ namespace signalrtc
                     notifyReq.Header.ContentType = SIPMIMETypes.MWI_CONTENT_TYPE;
                     notifyReq.Body = "Messages-Waiting: no";
 
-                    SIPNonInviteTransaction notifyTx = new SIPNonInviteTransaction(m_sipTransport, notifyReq, null);
+                    // A little trick here is using the remote SIP end point as the destination rather than the Contact URI.
+                    // Ideally some extra logic to check for IPv4 NAT should be applied. But since this server is known to
+                    // be operating in the cloud and only send NOTIFY requests to Internet clients it should be a reasonable
+                    // option.
+                    SIPNonInviteTransaction notifyTx = new SIPNonInviteTransaction(m_sipTransport, notifyReq, subscribeRequest.RemoteSIPEndPoint);
                     notifyTx.SendRequest();
                 }
             }

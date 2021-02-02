@@ -552,33 +552,33 @@ namespace signalrtc
         //    originTransaction.SendResponse(response);
         //}
 
-        private void InDialogueTransactionRemoved(SIPTransaction sipTransaction)
-        {
-            if (m_inDialogueTransactions.ContainsKey(sipTransaction.TransactionId))
-            {
-                m_inDialogueTransactions.TryRemove(sipTransaction.TransactionId, out _);
-            }
-        }
+        //private void InDialogueTransactionRemoved(SIPTransaction sipTransaction)
+        //{
+        //    if (m_inDialogueTransactions.ContainsKey(sipTransaction.TransactionId))
+        //    {
+        //        m_inDialogueTransactions.TryRemove(sipTransaction.TransactionId, out _);
+        //    }
+        //}
 
-        private SIPRequest GetInviteRequest(SIPDialogue dialogue, SIPEndPoint localSIPEndPoint, string body)
-        {
-            SIPRequest inviteRequest = new SIPRequest(SIPMethodsEnum.INVITE, dialogue.RemoteTarget);
+        //private SIPRequest GetInviteRequest(SIPDialogue dialogue, SIPEndPoint localSIPEndPoint, string body)
+        //{
+        //    SIPRequest inviteRequest = new SIPRequest(SIPMethodsEnum.INVITE, dialogue.RemoteTarget);
 
-            SIPHeader inviteHeader = new SIPHeader(SIPFromHeader.ParseFromHeader(dialogue.LocalUserField.ToString()), SIPToHeader.ParseToHeader(dialogue.RemoteUserField.ToString()), dialogue.CSeq, dialogue.CallId);
-            SIPURI contactURI = new SIPURI(dialogue.RemoteTarget.Scheme, localSIPEndPoint);
-            inviteHeader.Contact = SIPContactHeader.ParseContactHeader("<" + contactURI.ToString() + ">");
-            inviteHeader.CSeqMethod = SIPMethodsEnum.INVITE;
-            inviteRequest.Header = inviteHeader;
-            inviteRequest.Header.Routes = dialogue.RouteSet;
+        //    SIPHeader inviteHeader = new SIPHeader(SIPFromHeader.ParseFromHeader(dialogue.LocalUserField.ToString()), SIPToHeader.ParseToHeader(dialogue.RemoteUserField.ToString()), dialogue.CSeq, dialogue.CallId);
+        //    SIPURI contactURI = new SIPURI(dialogue.RemoteTarget.Scheme, localSIPEndPoint);
+        //    inviteHeader.Contact = SIPContactHeader.ParseContactHeader("<" + contactURI.ToString() + ">");
+        //    inviteHeader.CSeqMethod = SIPMethodsEnum.INVITE;
+        //    inviteRequest.Header = inviteHeader;
+        //    inviteRequest.Header.Routes = dialogue.RouteSet;
 
-            SIPViaHeader viaHeader = new SIPViaHeader(localSIPEndPoint, CallProperties.CreateBranchId());
-            inviteRequest.Header.Vias.PushViaHeader(viaHeader);
+        //    SIPViaHeader viaHeader = new SIPViaHeader(localSIPEndPoint, CallProperties.CreateBranchId());
+        //    inviteRequest.Header.Vias.PushViaHeader(viaHeader);
 
-            inviteRequest.Body = body;
-            inviteRequest.Header.ContentLength = body.Length;
-            inviteRequest.Header.ContentType = m_sdpContentType;
+        //    inviteRequest.Body = body;
+        //    inviteRequest.Header.ContentLength = body.Length;
+        //    inviteRequest.Header.ContentType = m_sdpContentType;
 
-            return inviteRequest;
-        }
+        //    return inviteRequest;
+        //}
     }
 }
