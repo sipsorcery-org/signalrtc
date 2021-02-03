@@ -179,7 +179,10 @@ namespace signalrtc
                         // Give the subscribe response time to be sent.
                         Thread.Sleep(500);
 
-                        SendInitialNotification(req, sipAccount);
+                        if (req.Header.Expires > 0)
+                        {
+                            SendInitialNotification(req, sipAccount);
+                        }
                     }
                 }
             }
