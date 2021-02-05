@@ -99,5 +99,10 @@ namespace signalrtc
         /// Load Balancer) that should not have the public Contact Host set.
         /// </summary>
         public const string SIP_PRIVATE_CONTACT_SUBNETS = "SIPSorcery:ContactHost:PrivateSubnets";
+
+        /// <summary>
+        /// The URL of the Janus Server REST end point.
+        /// </summary>
+        public const string JANUS_URL = "JanusURL";
     }
 }

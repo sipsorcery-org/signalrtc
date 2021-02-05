@@ -88,7 +88,13 @@ namespace signalrtc
 
             services.AddControllers()
                 .AddNewtonsoftJson(options =>
-                options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore
+              {
+                  options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore;
+                  //options.SerializerSettings.Error = (object sender, Newtonsoft.Json.Serialization.ErrorEventArgs args) =>
+                  //{
+                  //    System.Console.WriteLine($"JSON errror: {args.ErrorContext.Error}");
+                  //};
+              }
             );
             services.AddSwaggerGen(c =>
             {

@@ -177,8 +177,7 @@ namespace signalrtc
 
             _sipTransport.CustomiseRequestHeader = CustomiseContact;
             _sipTransport.CustomiseResponseHeader = CustomiseContact;
-
-            EnableTraceLogs(_sipTransport);
+            _sipTransport.EnableTraceLogs();
 
             _bindingsManager.Start();
             _registrarCore.Start(REGISTRAR_CORE_WORKER_THREADS);
@@ -392,46 +391,6 @@ namespace signalrtc
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Enable detailed SIP log messages.
-        /// </summary>
-        private void EnableTraceLogs(SIPTransport sipTransport)
-        {
-            sipTransport.SIPRequestInTraceEvent += (localEP, remoteEP, req) =>
-            {
-                _logger.LogDebug($"Request received: {localEP}<-{remoteEP} {req.StatusLine}");
-                _logger.LogTrace(req.ToString());
-            };
-
-            sipTransport.SIPRequestOutTraceEvent += (localEP, remoteEP, req) =>
-            {
-                _logger.LogDebug($"Request sent: {localEP}->{remoteEP} {req.StatusLine}");
-                _logger.LogTrace(req.ToString());
-            };
-
-            sipTransport.SIPResponseInTraceEvent += (localEP, remoteEP, resp) =>
-            {
-                _logger.LogDebug($"Response received: {localEP}<-{remoteEP} {resp.ShortDescription}");
-                _logger.LogTrace(resp.ToString());
-            };
-
-            sipTransport.SIPResponseOutTraceEvent += (localEP, remoteEP, resp) =>
-            {
-                _logger.LogDebug($"Response sent: {localEP}->{remoteEP} {resp.ShortDescription}");
-                _logger.LogTrace(resp.ToString());
-            };
-
-            sipTransport.SIPRequestRetransmitTraceEvent += (tx, req, count) =>
-            {
-                _logger.LogDebug($"Request retransmit {count} for request {req.StatusLine}, initial transmit {DateTime.Now.Subtract(tx.InitialTransmit).TotalSeconds.ToString("0.###")}s ago.");
-            };
-
-            sipTransport.SIPResponseRetransmitTraceEvent += (tx, resp, count) =>
-            {
-                _logger.LogDebug($"Response retransmit {count} for response {resp.ShortDescription}, initial transmit {DateTime.Now.Subtract(tx.InitialTransmit).TotalSeconds.ToString("0.###")}s ago.");
-            };
         }
     }
 }

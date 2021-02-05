@@ -16,6 +16,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -32,9 +33,16 @@ namespace signalrtc.Controllers.api
     [ApiController]
     public class WebRTCSignalController : ControllerBase
     {
+        public const int MAX_JANUS_ECHO_DURATION = 180;
+
         private readonly SIPAssetsDbContext _context;
         private readonly IConfiguration _config;
         private readonly ILogger<WebRTCSignalController> _logger;
+
+        /// <summary>
+        /// Base URL for the Janus REST server.
+        /// </summary>
+        private readonly string _janusUrl;
 
         public WebRTCSignalController(
             SIPAssetsDbContext context,
@@ -44,6 +52,8 @@ namespace signalrtc.Controllers.api
             _context = context;
             _config = config;
             _logger = logger;
+
+            _janusUrl = _config[ConfigKeys.JANUS_URL];
         }
 
         /// <summary>
@@ -96,7 +106,7 @@ namespace signalrtc.Controllers.api
                 x.From.ToLower() == from.ToLower() &&
                 x.DeliveredAt == null);
 
-            if(type != WebRTCSignalTypesEnum.any)
+            if (type != WebRTCSignalTypesEnum.any)
             {
                 query = query.Where(x => x.SignalType == type.ToString());
             }
@@ -105,7 +115,7 @@ namespace signalrtc.Controllers.api
                 .OrderBy(x => x.Inserted)
                 .FirstOrDefaultAsync();
 
-            if(nextSignal != null)
+            if (nextSignal != null)
             {
                 nextSignal.DeliveredAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
@@ -162,7 +172,7 @@ namespace signalrtc.Controllers.api
 
             _context.WebRTCSignals.Add(sdpSignal);
 
-             await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
             return Ok();
         }
@@ -221,7 +231,7 @@ namespace signalrtc.Controllers.api
         /// <param name="to">>The identity of the destination peer for the SDP offer or answer.</param>
         private async Task ExpireExisting(string from, string to)
         {
-            var existing = await _context.WebRTCSignals.Where(x => 
+            var existing = await _context.WebRTCSignals.Where(x =>
                 (from.ToLower() == x.From.ToLower() && to.ToLower() == x.To.ToLower()) ||
                  (to.ToLower() == x.From.ToLower() && from.ToLower() == x.To.ToLower()))
                .ToArrayAsync();
@@ -230,6 +240,90 @@ namespace signalrtc.Controllers.api
             {
                 _context.RemoveRange(existing);
                 await _context.SaveChangesAsync();
+            }
+        }
+
+        /// <summary>
+        /// Sets up a WebRTC Echo Test with the Janus WebRTC server.
+        /// </summary>
+        /// <param name="sdp">The SDP offer from a WebRTC peer that will connect to the Janus Echo Test plugin.</param>
+        /// <param name="duration">The maximum duration in seconds for the </param>
+        /// <returns>The SDP answer from Janus.</returns>
+        /// <remarks>
+        /// Sanity test:
+        /// curl -X POST https://localhost:5001/api/webrtcsignal/janus?duration=10  -H "Content-Type: application/json" -v -d "1234"
+        /// </remarks>
+        [HttpPost("janus")]
+        public async Task<ActionResult<string>> JanusEcho([FromBody] string sdp, int duration = MAX_JANUS_ECHO_DURATION)
+        {
+            if (string.IsNullOrEmpty(sdp))
+            {
+                _logger.LogWarning($"WebRTC signal controller janus PUT sdp request supplied an empty SDP offer.");
+                return BadRequest();
+            }
+            else if(duration > MAX_JANUS_ECHO_DURATION)
+            {
+                duration = MAX_JANUS_ECHO_DURATION;
+            }
+
+            _logger.LogDebug($"Creating Janus echo test with duration {duration}s.");
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+            cts.CancelAfter(duration * 1000);
+            var janusClient = new JanusRestClient(_janusUrl, _logger, cts.Token);
+            
+            var startSessionResult = await janusClient.StartSession();
+
+            if (!startSessionResult.Success)
+            {
+                return Problem("Failed to create Janus session.");
+            }
+            else
+            {
+                var waitForAnswer = new TaskCompletionSource<string>();
+
+                janusClient.OnJanusEvent += (resp) =>
+                {
+                    if (resp.jsep != null)
+                    {
+                        _logger.LogDebug($"janus get event jsep={resp.jsep.type}.");
+                        _logger.LogDebug($"janus SDP Answer: {resp.jsep.sdp}");
+
+                        waitForAnswer.SetResult(resp.jsep.sdp);
+                    }
+                };
+
+                var pluginResult = await janusClient.StartEcho(sdp);
+                if (!pluginResult.Success)
+                {
+                    await janusClient.DestroySession();
+                    waitForAnswer.SetCanceled();
+                    cts.Cancel();
+                    return Problem("Failed to create Janus Echo Test Plugin instance.");
+                }
+                else
+                {
+                    using (cts.Token.Register(() =>
+                    {
+                        // This callback will be executed if the token is cancelled.
+                        waitForAnswer.TrySetCanceled();
+                    }))
+                    {
+                        // At this point we're waiting for a response on the Janus long poll thread that
+                        // contains the SDP answer to send back tot he client.
+                        try
+                        {
+                           var sdpAnswer = await waitForAnswer.Task;
+                            _logger.LogDebug("SDP answer ready, sending to client.");
+                            return sdpAnswer;
+                        }
+                        catch (TaskCanceledException)
+                        {
+                            await janusClient.DestroySession();
+                            return Problem("Janus operation timed out waiting for Echo Test plugin SDP answer.");
+                        }
+                    }
+                }
             }
         }
     }
