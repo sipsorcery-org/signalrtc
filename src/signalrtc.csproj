@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>signalrtc</RootNamespace>
-    <AssemblyVersion>0.0.33.0</AssemblyVersion>
-    <Version>0.0.33</Version>
+    <AssemblyVersion>0.0.34.0</AssemblyVersion>
+    <Version>0.0.34</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -55,7 +55,7 @@
     <PackageReference Include="RestSharp" Version="106.11.7" />
     <PackageReference Include="RestSharp.Serializers.NewtonsoftJson" Version="106.11.7" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
-    <PackageReference Include="SIPSorcery" Version="5.0.20-pre" />
+    <PackageReference Include="SIPSorcery" Version="5.0.22-pre" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.0.0" />
   </ItemGroup>
 
