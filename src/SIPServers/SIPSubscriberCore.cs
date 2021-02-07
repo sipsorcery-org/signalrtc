@@ -134,7 +134,7 @@ namespace signalrtc
         {
             SIPRequest req = subTx.TransactionRequest;
             string user = req.Header.From.FromURI.User;
-            string domain = req.Header.From.FromURI.Host;
+            string domain = req.Header.From.FromURI.HostAddress;
 
             string canonicalDomain = m_sipDomainManager.GetCanonicalDomain(domain);
 

@@ -210,12 +210,12 @@ namespace signalrtc
                 SIPURI registerURI = sipRequest.URI;
                 SIPToHeader toHeader = sipRequest.Header.To;
                 string toUser = toHeader.ToURI.User;
-                string canonicalDomain = m_sipDomainManager.GetCanonicalDomain(toHeader.ToURI.Host);
+                string canonicalDomain = m_sipDomainManager.GetCanonicalDomain(toHeader.ToURI.HostAddress);
                 int requestedExpiry = GetRequestedExpiry(sipRequest);
 
                 if (canonicalDomain == null)
                 {
-                    Logger.LogWarning("Register request for " + toHeader.ToURI.Host + " rejected as no matching domain found.");
+                    Logger.LogWarning($"Register request for {toHeader.ToURI.HostAddress} rejected as no matching domain found.");
                     SIPResponse noDomainResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Forbidden, "Domain not serviced");
                     registerTransaction.SendResponse(noDomainResponse);
                     return RegisterResultEnum.DomainNotServiced;

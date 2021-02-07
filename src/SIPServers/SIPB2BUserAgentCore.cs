@@ -166,7 +166,7 @@ namespace signalrtc
             }
             else
             {
-                string canonicalDomain = _sipDomainManager.GetCanonicalDomain(invReq.Header.From.FromURI.Host);
+                string canonicalDomain = _sipDomainManager.GetCanonicalDomain(invReq.Header.From.FromURI.HostAddress);
 
                 if (canonicalDomain == null)
                 {

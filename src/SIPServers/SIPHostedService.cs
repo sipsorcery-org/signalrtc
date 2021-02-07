@@ -360,16 +360,26 @@ namespace signalrtc
         {
             var dstAddress = dstEP.GetIPEndPoint().Address;
 
+            // Don't customise if the destination is a private IP address (which means it's staying
+            // on the same subnet or virtual subnet).
             if (!_isPrivateSubnet(dstAddress) && inviteHeader.Contact != null && inviteHeader.Contact.Count == 1)
             {
                 // The priority is use the public IP address fields if they are available (saves DNS lookups) and
-                // falls back to the hostname if they are not.
+                // falls back to the hostname if they are not. The exception is if the Contact URI is using a secure
+                // SIP scheme "sips" in which case the priority is to use any available hostname first.
 
                 // Port of 0 is set when user agents set Contact Host to "0.0.0.0:0" which is the method to
                 // get the transport layer to set it at send time.
                 bool isDefaultPort = inviteHeader.Contact[0].ContactURI.IsDefaultPort() || inviteHeader.Contact[0].ContactURI.HostPort == "0";
 
-                if (_publicContactIPv4 != null &&
+                if(inviteHeader.Contact[0].ContactURI.Scheme == SIPSchemesEnum.sips &&
+                    !string.IsNullOrWhiteSpace(_publicContactHostname))
+                {
+                    var copy = inviteHeader.Copy();
+                    copy.Contact[0].ContactURI.Host = _publicContactHostname;
+                    return copy;
+                }
+                else if (_publicContactIPv4 != null &&
                     (dstAddress.AddressFamily == AddressFamily.InterNetwork || dstAddress.IsIPv4MappedToIPv6))
                 {
                     var copy = inviteHeader.Copy();
