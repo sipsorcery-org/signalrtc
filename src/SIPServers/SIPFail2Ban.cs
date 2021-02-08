@@ -149,7 +149,7 @@ namespace signalrtc
         {
             if (_banList.TryGetValue(remoteEP.Address, out var banEntry))
             {
-                if (DateTime.Now.Subtract(banEntry.BannedAt).TotalMinutes > banEntry.BanDurationMinutes)
+                if (banEntry.IsBanned && DateTime.Now.Subtract(banEntry.BannedAt).TotalMinutes > banEntry.BanDurationMinutes)
                 {
                     // The current ban has expired.
                     logger.LogDebug($"Ban for {remoteEP} has expired for ban number {banEntry.BanCounts}.");
