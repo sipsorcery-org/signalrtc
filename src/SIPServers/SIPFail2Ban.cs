@@ -38,7 +38,7 @@ namespace signalrtc
         /// The duration in minutes for each ban step. The step doubles each time
         /// a remote party gets banned.
         /// </summary>
-        public const int BAN_DURATION_STEP_MINUTES = 2;
+        public const int BAN_DURATION_STEP_MINUTES = 5;
 
         public SIPEndPoint Source;
         public int RequestCount;

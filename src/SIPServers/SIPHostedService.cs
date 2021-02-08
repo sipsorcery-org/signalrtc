@@ -289,7 +289,7 @@ namespace signalrtc
                 }
                 else
                 {
-                    _logger.LogTrace($"Ban list hit for {remoteEndPoint} and {banResult} dropped request {sipRequest.StatusLine}, user agent {sipRequest.Header.UserAgent}.");
+                    _logger.LogWarning($"Ban list hit for {remoteEndPoint} and {banResult} dropped request {sipRequest.StatusLine}, user agent {sipRequest.Header.UserAgent}.");
                 }
             }
             catch (Exception reqExcp)
