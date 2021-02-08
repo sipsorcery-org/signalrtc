@@ -57,6 +57,7 @@ namespace signalrtc
         private CDRDataLayer _cdrDataLayer;
         private SIPDomainManager _sipDomainManager;
         private SIPSubscriberCore _subscriberCore;
+        private SIPFail2Ban _sipFail2Ban;
 
         // Fields for setting the Contact header in SIP messages.
         public string _publicContactHostname;
@@ -78,6 +79,10 @@ namespace signalrtc
 
             _sipTransport = new SIPTransport();
 
+            // Not using the default trace logs from SIP transport as we don't want to 
+            // log requests from banned addresses.
+            EnableTraceLogs();
+
             _sipDomainManager = new SIPDomainManager(dbContextFactory);
             _sipDomainManager.Load().Wait();
 
@@ -87,6 +92,9 @@ namespace signalrtc
             _sipCallManager = new SIPCallManager(_sipTransport, null, dbContextFactory);
             _cdrDataLayer = new CDRDataLayer(dbContextFactory);
             _subscriberCore = new SIPSubscriberCore(_sipTransport, dbContextFactory, _sipDomainManager);
+            _sipFail2Ban = new SIPFail2Ban(_sipTransport);
+
+            _registrarCore.OnRegisterFailure += _sipFail2Ban.RegistrationFailure;
 
             SIPCDR.CDRCreated += _cdrDataLayer.Add;
             SIPCDR.CDRAnswered += _cdrDataLayer.Update;
@@ -106,7 +114,7 @@ namespace signalrtc
             _publicContactHostname = _config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_HOSTNAME, null);
             IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV4, null), out _publicContactIPv4);
             IPAddress.TryParse(_config.GetValue<string>(ConfigKeys.SIP_PUBLIC_CONTACT_PUBLICIPV6, null), out _publicContactIPv6);
-            
+
             IConfigurationSection sipPrivateSubnets = _config.GetSection(ConfigKeys.SIP_PRIVATE_CONTACT_SUBNETS);
 
             _logger.LogInformation($"SIP transport public contact hostname set to {_publicContactHostname}.");
@@ -117,13 +125,13 @@ namespace signalrtc
             {
                 List<Func<IPAddress, bool>> isInSubnetFunctions = new List<Func<IPAddress, bool>>();
 
-                foreach(string subnet in sipPrivateSubnets.Get<string[]>())
+                foreach (string subnet in sipPrivateSubnets.Get<string[]>())
                 {
                     _logger.LogInformation($"SIP transport private subnet {subnet}.");
-                    
-                    if(IPNetwork.TryParse(subnet, out var network))
+
+                    if (IPNetwork.TryParse(subnet, out var network))
                     {
-                        isInSubnetFunctions.Add((ipaddr) => 
+                        isInSubnetFunctions.Add((ipaddr) =>
                             ipaddr.AddressFamily == network.AddressFamily
                            && network.Contains(ipaddr));
                     }
@@ -133,13 +141,13 @@ namespace signalrtc
                     }
                 }
 
-                if(isInSubnetFunctions.Count > 0)
+                if (isInSubnetFunctions.Count > 0)
                 {
                     _isPrivateSubnet = (ipaddr) =>
                     {
-                        foreach(var isInFunc in isInSubnetFunctions)
+                        foreach (var isInFunc in isInSubnetFunctions)
                         {
-                            if(isInFunc(ipaddr))
+                            if (isInFunc(ipaddr))
                             {
                                 return true;
                             }
@@ -148,10 +156,12 @@ namespace signalrtc
                         return false;
                     };
                 }
+
+                _sipFail2Ban.IsPrivateSubnet = _isPrivateSubnet;
             }
 
             // Create SIP channels.
-            if(Socket.OSSupportsIPv6)
+            if (Socket.OSSupportsIPv6)
             {
                 if (_tlsCertificate != null)
                 {
@@ -177,7 +187,6 @@ namespace signalrtc
 
             _sipTransport.CustomiseRequestHeader = CustomiseContact;
             _sipTransport.CustomiseResponseHeader = CustomiseContact;
-            _sipTransport.EnableTraceLogs();
 
             _bindingsManager.Start();
             _registrarCore.Start(REGISTRAR_CORE_WORKER_THREADS);
@@ -190,7 +199,7 @@ namespace signalrtc
             _ = Task.Run(async () =>
             {
                 var dp = await _sipDialPlanManager.LoadDialPlan();
-                if(dp != null)
+                if (dp != null)
                 {
                     _sipDialPlanManager.CompileDialPlan(dp.DialPlanScript, dp.LastUpdate);
                 }
@@ -220,58 +229,66 @@ namespace signalrtc
         {
             try
             {
-                if (sipRequest.Header.From != null &&
-                sipRequest.Header.From.FromTag != null &&
-                sipRequest.Header.To != null &&
-                sipRequest.Header.To.ToTag != null)
+                var banResult = _sipFail2Ban.IsBanned(remoteEndPoint);
+                if (banResult == BanReasonsEnum.None)
                 {
-                    _sipCallManager.ProcessInDialogueRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                    if (sipRequest.Header.From != null &&
+                    sipRequest.Header.From.FromTag != null &&
+                    sipRequest.Header.To != null &&
+                    sipRequest.Header.To.ToTag != null)
+                    {
+                        _sipCallManager.ProcessInDialogueRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                    }
+                    else
+                    {
+                        switch (sipRequest.Method)
+                        {
+                            case SIPMethodsEnum.BYE:
+                            case SIPMethodsEnum.CANCEL:
+                                // BYE's and CANCEL's should always have dialog fields set.
+                                SIPResponse badResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.BadRequest, null);
+                                await _sipTransport.SendResponseAsync(badResponse);
+                                break;
+
+                            case SIPMethodsEnum.INVITE:
+                                if (!await WasRejected(sipRequest))
+                                {
+                                    _logger.LogInformation($"Incoming call request: {localSIPEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
+                                    _b2bUserAgentCore.AddInviteRequest(sipRequest);
+                                }
+                                break;
+
+                            case SIPMethodsEnum.OPTIONS:
+                                SIPResponse optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
+                                optionsResponse.Header.Contact = new List<SIPContactHeader> { SIPContactHeader.GetDefaultSIPContactHeader(sipRequest.URI.Scheme) };
+                                optionsResponse.Header.Server = SIPConstants.SIP_USERAGENT_STRING;
+                                await _sipTransport.SendResponseAsync(optionsResponse);
+                                break;
+
+                            case SIPMethodsEnum.REGISTER:
+                                if (!await WasRejected(sipRequest))
+                                {
+                                    _registrarCore.AddRegisterRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                                }
+                                break;
+
+                            case SIPMethodsEnum.SUBSCRIBE:
+                                if (!await WasRejected(sipRequest))
+                                {
+                                    _subscriberCore.AddSubscribeRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
+                                }
+                                break;
+
+                            default:
+                                var notAllowedResp = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.MethodNotAllowed, null);
+                                await _sipTransport.SendResponseAsync(notAllowedResp);
+                                break;
+                        }
+                    }
                 }
                 else
                 {
-                    switch (sipRequest.Method)
-                    {
-                        case SIPMethodsEnum.BYE:
-                        case SIPMethodsEnum.CANCEL:
-                            // BYE's and CANCEL's should always have dialog fields set.
-                            SIPResponse badResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.BadRequest, null);
-                            await _sipTransport.SendResponseAsync(badResponse);
-                            break;
-
-                        case SIPMethodsEnum.INVITE:
-                            if (!await WasRejected(sipRequest))
-                            {
-                                _logger.LogInformation($"Incoming call request: {localSIPEndPoint}<-{remoteEndPoint} {sipRequest.URI}.");
-                                _b2bUserAgentCore.AddInviteRequest(sipRequest);
-                            }
-                            break;
-
-                        case SIPMethodsEnum.OPTIONS:
-                            SIPResponse optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
-                            optionsResponse.Header.Contact = new List<SIPContactHeader> { SIPContactHeader.GetDefaultSIPContactHeader(sipRequest.URI.Scheme) };
-                            optionsResponse.Header.Server = SIPConstants.SIP_USERAGENT_STRING;
-                            await _sipTransport.SendResponseAsync(optionsResponse);
-                            break;
-
-                        case SIPMethodsEnum.REGISTER:
-                            if (!await WasRejected(sipRequest))
-                            {
-                                _registrarCore.AddRegisterRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
-                            }
-                            break;
-
-                        case SIPMethodsEnum.SUBSCRIBE:
-                            if (!await WasRejected(sipRequest))
-                            {
-                                _subscriberCore.AddSubscribeRequest(localSIPEndPoint, remoteEndPoint, sipRequest);
-                            }
-                            break;
-
-                        default:
-                            var notAllowedResp = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.MethodNotAllowed, null);
-                            await _sipTransport.SendResponseAsync(notAllowedResp);
-                            break;
-                    }
+                    _logger.LogTrace($"Ban list hit for {remoteEndPoint} and {banResult} dropped request {sipRequest.StatusLine}.");
                 }
             }
             catch (Exception reqExcp)
@@ -299,7 +316,7 @@ namespace signalrtc
                 _ => null
             };
 
-            if(errorMessge != null)
+            if (errorMessge != null)
             {
                 SIPResponse errResponse = SIPResponse.GetResponse(req, SIPResponseStatusCodesEnum.BadRequest, errorMessge);
                 await _sipTransport.SendResponseAsync(errResponse);
@@ -372,7 +389,7 @@ namespace signalrtc
                 // get the transport layer to set it at send time.
                 bool isDefaultPort = inviteHeader.Contact[0].ContactURI.IsDefaultPort() || inviteHeader.Contact[0].ContactURI.HostPort == "0";
 
-                if(inviteHeader.Contact[0].ContactURI.Scheme == SIPSchemesEnum.sips &&
+                if (inviteHeader.Contact[0].ContactURI.Scheme == SIPSchemesEnum.sips &&
                     !string.IsNullOrWhiteSpace(_publicContactHostname))
                 {
                     var copy = inviteHeader.Copy();
@@ -392,7 +409,7 @@ namespace signalrtc
                     copy.Contact[0].ContactURI.Host = isDefaultPort ? $"[{_publicContactIPv6}]" : $"[{_publicContactIPv6}]:{inviteHeader.Contact[0].ContactURI.HostPort}";
                     return copy;
                 }
-                else if(!string.IsNullOrWhiteSpace(_publicContactHostname))
+                else if (!string.IsNullOrWhiteSpace(_publicContactHostname))
                 {
                     var copy = inviteHeader.Copy();
                     copy.Contact[0].ContactURI.Host = _publicContactHostname;
@@ -401,6 +418,46 @@ namespace signalrtc
             }
 
             return null;
+        }
+
+        public void EnableTraceLogs()
+        {
+            _sipTransport.SIPRequestInTraceEvent += (localEP, remoteEP, req) =>
+            {
+                if (_sipFail2Ban.IsBanned(remoteEP) == BanReasonsEnum.None)
+                {
+                    _logger.LogDebug($"Request received: {localEP}<-{remoteEP} {req.StatusLine}");
+                    _logger.LogTrace(req.ToString());
+                }
+            };
+
+            _sipTransport.SIPRequestOutTraceEvent += (localEP, remoteEP, req) =>
+            {
+                _logger.LogDebug($"Request sent: {localEP}->{remoteEP} {req.StatusLine}");
+                _logger.LogTrace(req.ToString());
+            };
+
+            _sipTransport.SIPResponseInTraceEvent += (localEP, remoteEP, resp) =>
+            {
+                _logger.LogDebug($"Response received: {localEP}<-{remoteEP} {resp.ShortDescription}");
+                _logger.LogTrace(resp.ToString());
+            };
+
+            _sipTransport.SIPResponseOutTraceEvent += (localEP, remoteEP, resp) =>
+            {
+                _logger.LogDebug($"Response sent: {localEP}->{remoteEP} {resp.ShortDescription}");
+                _logger.LogTrace(resp.ToString());
+            };
+
+            _sipTransport.SIPRequestRetransmitTraceEvent += (tx, req, count) =>
+            {
+                _logger.LogDebug($"Request retransmit {count} for request {req.StatusLine}, initial transmit {DateTime.Now.Subtract(tx.InitialTransmit).TotalSeconds.ToString("0.###")}s ago.");
+            };
+
+            _sipTransport.SIPResponseRetransmitTraceEvent += (tx, resp, count) =>
+            {
+                _logger.LogDebug($"Response retransmit {count} for response {resp.ShortDescription}, initial transmit {DateTime.Now.Subtract(tx.InitialTransmit).TotalSeconds.ToString("0.###")}s ago.");
+            };
         }
     }
 }

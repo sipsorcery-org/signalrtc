@@ -93,7 +93,11 @@ namespace signalrtc
         private AutoResetEvent m_registerARE = new AutoResetEvent(false);
         private bool _exit = false;
 
-        public event Action<double, bool> RegisterComplete;     // Event to allow hook into get notifications about the processing time for registrations. The boolean parameter is true of the request contained an authentication header.
+        /// <summary>
+        /// This event fires when a registration attempt fails. As well as the registration
+        /// result rhe remote SIP end point of the client is supplied to the handler.
+        /// </summary>
+        public event Action<SIPEndPoint, RegisterResultEnum> OnRegisterFailure;
 
         public int BacklogLength
         {
@@ -184,7 +188,10 @@ namespace signalrtc
                         RegisterResultEnum result = Register(registrarTransaction);
                         TimeSpan duration = DateTime.Now.Subtract(startTime);
 
-                        RegisterComplete?.Invoke(duration.TotalMilliseconds, registrarTransaction.TransactionRequest.Header.AuthenticationHeader != null);
+                        if (result != RegisterResultEnum.Authenticated)
+                        {
+                            OnRegisterFailure?.Invoke(registrarTransaction.TransactionRequest.RemoteSIPEndPoint, result);
+                        }
                     }
                 }
                 else if (!_exit)
