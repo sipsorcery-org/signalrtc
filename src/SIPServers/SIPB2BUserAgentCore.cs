@@ -67,7 +67,7 @@ namespace signalrtc
         /// This event fires when an incoming call request is not accepted by the server side of 
         /// the B2BUA core.
         /// </summary>
-        public event Action<SIPEndPoint, CallFailureEnum> OnAcceptCallFailure;
+        public event Action<SIPEndPoint, CallFailureEnum, SIPRequest> OnAcceptCallFailure;
 
         public SIPB2BUserAgentCore(
             SIPTransport sipTransport,
@@ -196,7 +196,7 @@ namespace signalrtc
                         Logger.LogWarning($"B2B no SIP account found for caller {invReq.Header.From.FromURI.User}@{canonicalDomain}, rejecting.");
                         uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.Forbidden, null));
 
-                        OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NoSIPAccount);
+                        OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NoSIPAccount, invReq);
                     }
 
                     return sipAccount;
@@ -233,7 +233,7 @@ namespace signalrtc
                     var notFoundResp = SIPResponse.GetResponse(uasTx.TransactionRequest, SIPResponseStatusCodesEnum.NotFound, null);
                     uasTx.SendFinalResponse(notFoundResp);
 
-                    OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NotFound);
+                    OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NotFound, invReq);
                 }
                 else
                 {

@@ -99,7 +99,7 @@ namespace signalrtc
         /// will be reset. This is intended to deal with cases where a call desintation
         /// could be accidentally mistyped etc.
         /// </summary>
-        public const int BAN_RESET_COUNT_AFTER_MINUTES = 5;
+        public const int BAN_RESET_COUNT_AFTER_MINUTES = 10;
 
         /// <summary>
         /// Hostile user agents often send an INVITE request and then ignore failure
@@ -120,6 +120,13 @@ namespace signalrtc
         /// banned.
         /// </summary>
         public const int BAN_THRESHOLD_ACCEPT_CALL_FAILURE_COUNT = 5;
+
+        /// <summary>
+        /// Violating a ban rule increments the violation count. If the rule was violated with
+        /// a request that used an IP address in the URI then the violation count is increaed
+        /// to this number.
+        /// </summary>
+        public const int RULE_VIOLATION_COUNT_FOR_IPADDRESS = 3;
 
         private readonly ILogger logger = SIPSorcery.LogFactory.CreateLogger<SIPFail2Ban>();
 
@@ -167,7 +174,7 @@ namespace signalrtc
             }
         }
 
-        public void RegistrationFailure(SIPEndPoint remoteEP, RegisterResultEnum result)
+        public void RegistrationFailure(SIPEndPoint remoteEP, RegisterResultEnum result, SIPRequest registerRequest)
         {
             if (result == RegisterResultEnum.DomainNotServiced || result == RegisterResultEnum.Forbidden)
             {
@@ -181,15 +188,22 @@ namespace signalrtc
                         banEntry.RegistrationFailureCount = 0;
                     }
 
+                    int violationCount = 1;
+                    if(IPAddress.TryParse(registerRequest.URI.HostAddress, out _))
+                    {
+                        // Malicious UA's typically only use the IP address when scanning and brute forcing.
+                        violationCount = RULE_VIOLATION_COUNT_FOR_IPADDRESS;
+                    }
+
                     banEntry.LastRegistrationFailureAt = DateTime.Now;
-                    banEntry.RegistrationFailureCount++;
+                    banEntry.RegistrationFailureCount += violationCount;
 
                     ApplyBanRules(ref banEntry);
                 }
             }
         }
 
-        public void AcceptCallFailure(SIPEndPoint remoteEP, CallFailureEnum result)
+        public void AcceptCallFailure(SIPEndPoint remoteEP, CallFailureEnum result, SIPRequest inviteRequest)
         {
             if (IsPrivateSubnet?.Invoke(remoteEP.Address) == false)
             {
@@ -201,8 +215,15 @@ namespace signalrtc
                     banEntry.AcceptCallFailures = 0;
                 }
 
+                int violationCount = 1;
+                if (IPAddress.TryParse(inviteRequest.URI.HostAddress, out _))
+                {
+                    // Malicious UA's typically only use the IP address when scanning and brute forcing.
+                    violationCount = RULE_VIOLATION_COUNT_FOR_IPADDRESS;
+                }
+
                 banEntry.LastAcceptCallFailureAt = DateTime.Now;
-                banEntry.AcceptCallFailures++;
+                banEntry.AcceptCallFailures += violationCount;
 
                 ApplyBanRules(ref banEntry);
             }
@@ -291,7 +312,7 @@ namespace signalrtc
                 {
                     banEntry.BannedAt = DateTime.Now;
                     banEntry.BanCounts++;
-                    banEntry.BanDurationMinutes = BanEntry.BAN_DURATION_STEP_MINUTES * banEntry.BanCounts;
+                    banEntry.BanDurationMinutes = Convert.ToInt32(BanEntry.BAN_DURATION_STEP_MINUTES * Math.Pow(2, banEntry.BanCounts - 1));
                     logger.LogWarning($"Banning {banEntry.Source} for {banEntry.BanReason} duration {banEntry.BanDurationMinutes} minutes.");
                 }
             }

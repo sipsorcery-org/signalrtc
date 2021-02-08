@@ -97,7 +97,7 @@ namespace signalrtc
         /// This event fires when a registration attempt fails. As well as the registration
         /// result rhe remote SIP end point of the client is supplied to the handler.
         /// </summary>
-        public event Action<SIPEndPoint, RegisterResultEnum> OnRegisterFailure;
+        public event Action<SIPEndPoint, RegisterResultEnum, SIPRequest> OnRegisterFailure;
 
         public int BacklogLength
         {
@@ -190,7 +190,7 @@ namespace signalrtc
 
                         if (result != RegisterResultEnum.Authenticated)
                         {
-                            OnRegisterFailure?.Invoke(registrarTransaction.TransactionRequest.RemoteSIPEndPoint, result);
+                            OnRegisterFailure?.Invoke(registrarTransaction.TransactionRequest.RemoteSIPEndPoint, result, registrarTransaction.TransactionRequest);
                         }
                     }
                 }

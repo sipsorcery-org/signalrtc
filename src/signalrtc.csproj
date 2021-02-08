@@ -6,8 +6,8 @@
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
     <DockerfileContext>.</DockerfileContext>
     <RootNamespace>signalrtc</RootNamespace>
-    <AssemblyVersion>0.0.37.0</AssemblyVersion>
-    <Version>0.0.37</Version>
+    <AssemblyVersion>0.0.38.0</AssemblyVersion>
+    <Version>0.0.38</Version>
   </PropertyGroup>
 
   <ItemGroup>
