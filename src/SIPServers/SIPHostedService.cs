@@ -95,6 +95,7 @@ namespace signalrtc
             _sipFail2Ban = new SIPFail2Ban(_sipTransport);
 
             _registrarCore.OnRegisterFailure += _sipFail2Ban.RegistrationFailure;
+            _b2bUserAgentCore.OnAcceptCallFailure += _sipFail2Ban.AcceptCallFailure;
 
             SIPCDR.CDRCreated += _cdrDataLayer.Add;
             SIPCDR.CDRAnswered += _cdrDataLayer.Update;

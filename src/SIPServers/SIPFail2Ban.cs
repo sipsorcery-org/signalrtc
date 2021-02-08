@@ -28,23 +28,63 @@ namespace signalrtc
     {
         None,
         ExcessiveRegistrationFailures,
-        ExcessiveRetrasnmits
+        ExcessiveRetrasnmits,
+        ExcessiveAcceptCallFailures,
     }
 
     public class BanEntry
     {
+        /// <summary>
+        /// The duration in minutes for each ban step. The step doubles each time
+        /// a remote party gets banned.
+        /// </summary>
+        public const int BAN_DURATION_STEP_MINUTES = 2;
+
         public SIPEndPoint Source;
         public int RequestCount;
         public int ResponseCount;
-        public DateTime? LastRetransmitAt;
+
+        public DateTime LastRetransmitAt;
         public int RetransmitCount;
-        public DateTime? LastRegistrationFailureAt;
+        public DateTime LastRegistrationFailureAt;
         public int RegistrationFailureCount;
-        public DateTime? BannedAt;
-        //public int BanLengthSeconds;
+        public DateTime LastAcceptCallFailureAt;
+        public int AcceptCallFailures;
+
+        /// <summary>
+        /// The timestamp the source was banned at.
+        /// </summary>
+        public DateTime BannedAt;
+
+        /// <summary>
+        /// The duration in minutes for the current ban.
+        /// </summary>
+        public int BanDurationMinutes;
+
+        /// <summary>
+        /// The reason the current ban was imposed.
+        /// </summary>
         public BanReasonsEnum BanReason;
 
+        /// <summary>
+        /// The number of times this source address has been banned. To be banned multiple
+        /// times a previous ban must expire and then have the ban rules triggered again.
+        /// </summary>
+        public int BanCounts;
+
         public bool IsBanned => BanReason != BanReasonsEnum.None;
+
+        public void BanExpired()
+        {
+            LastRetransmitAt = DateTime.MinValue;
+            RetransmitCount = 0;
+            LastRegistrationFailureAt = DateTime.MinValue;
+            RegistrationFailureCount = 0;
+            LastAcceptCallFailureAt = DateTime.MinValue;
+            AcceptCallFailures = 0;
+            BannedAt = DateTime.MinValue;
+            BanReason = BanReasonsEnum.None;
+        }
     }
 
     /// <summary>
@@ -55,17 +95,18 @@ namespace signalrtc
     public class SIPFail2Ban
     {
         /// <summary>
+        /// If the lat hit on a specific rule was this many minutes ago the count for that rule 
+        /// will be reset. This is intended to deal with cases where a call desintation
+        /// could be accidentally mistyped etc.
+        /// </summary>
+        public const int BAN_RESET_COUNT_AFTER_MINUTES = 5;
+
+        /// <summary>
         /// Hostile user agents often send an INVITE request and then ignore failure
         /// responses resulting in multiple retransmits per request. A friendly 
         /// user agent is unlikely to require more than a handful of retransmits.
         /// </summary>
-        public const int BAN_THRESHOLD_RETRANSMIT_COUNT = 50;
-
-        /// <summary>
-        /// The period in seconds since the last retrasmit occurred at which the 
-        /// retransmit count will be reset.
-        /// </summary>
-        public const int BAN_THRESHOLD_RETRANSMIT_WINDOW = 120;
+        public const int BAN_THRESHOLD_RETRANSMIT_COUNT = 20;
 
         /// <summary>
         /// Hostile user agents will repeatedly attempt to register. If a source 
@@ -73,10 +114,17 @@ namespace signalrtc
         /// </summary>
         public const int BAN_THRESHOLD_FAILED_REGISTRATIONS_COUNT = 5;
 
+        /// <summary>
+        /// Hostile user agents will repeatedly attempt to place calls to arbitrary
+        /// desinations. If a source receives this many call attempt failures it will be 
+        /// banned.
+        /// </summary>
+        public const int BAN_THRESHOLD_ACCEPT_CALL_FAILURE_COUNT = 5;
+
         private readonly ILogger logger = SIPSorcery.LogFactory.CreateLogger<SIPFail2Ban>();
 
         private SIPTransport _sipTransport;
-        
+
         /// <summary>
         /// Optional function that can be used to classify specific subnets as private and
         /// immune to ban rules.
@@ -99,9 +147,19 @@ namespace signalrtc
 
         public BanReasonsEnum IsBanned(SIPEndPoint remoteEP)
         {
-            if(_banList.TryGetValue(remoteEP.Address, out var banEntry))
+            if (_banList.TryGetValue(remoteEP.Address, out var banEntry))
             {
-                return banEntry.BanReason;
+                if (DateTime.Now.Subtract(banEntry.BannedAt).TotalMinutes > banEntry.BanDurationMinutes)
+                {
+                    // The current ban has expired.
+                    logger.LogDebug($"Ban for {remoteEP} has expired for ban number {banEntry.BanCounts}.");
+                    banEntry.BanExpired();
+                    return BanReasonsEnum.None;
+                }
+                else
+                {
+                    return banEntry.BanReason;
+                }
             }
             else
             {
@@ -116,6 +174,13 @@ namespace signalrtc
                 if (IsPrivateSubnet?.Invoke(remoteEP.Address) == false)
                 {
                     var banEntry = _banList.GetOrAdd(remoteEP.Address, (addr) => new BanEntry { Source = remoteEP });
+
+                    if(DateTime.Now.Subtract(banEntry.LastRegistrationFailureAt).TotalMinutes > BAN_RESET_COUNT_AFTER_MINUTES)
+                    {
+                        // Reset count.
+                        banEntry.RegistrationFailureCount = 0;
+                    }
+
                     banEntry.LastRegistrationFailureAt = DateTime.Now;
                     banEntry.RegistrationFailureCount++;
 
@@ -124,9 +189,28 @@ namespace signalrtc
             }
         }
 
+        public void AcceptCallFailure(SIPEndPoint remoteEP, CallFailureEnum result)
+        {
+            if (IsPrivateSubnet?.Invoke(remoteEP.Address) == false)
+            {
+                var banEntry = _banList.GetOrAdd(remoteEP.Address, (addr) => new BanEntry { Source = remoteEP });
+
+                if (DateTime.Now.Subtract(banEntry.LastAcceptCallFailureAt).TotalMinutes > BAN_RESET_COUNT_AFTER_MINUTES)
+                {
+                    // Reset count.
+                    banEntry.AcceptCallFailures = 0;
+                }
+
+                banEntry.LastAcceptCallFailureAt = DateTime.Now;
+                banEntry.AcceptCallFailures++;
+
+                ApplyBanRules(ref banEntry);
+            }
+        }
+
         private void SIPRequestIn(SIPEndPoint localEP, SIPEndPoint remoteEP, SIPRequest req)
         {
-            if(IsPrivateSubnet?.Invoke(remoteEP.Address) == false)
+            if (IsPrivateSubnet?.Invoke(remoteEP.Address) == false)
             {
                 var banEntry = _banList.GetOrAdd(remoteEP.Address, (addr) => new BanEntry { Source = remoteEP });
                 banEntry.RequestCount++;
@@ -152,6 +236,13 @@ namespace signalrtc
             if (remoteAddr != null && IsPrivateSubnet?.Invoke(remoteAddr) == false)
             {
                 var banEntry = _banList.GetOrAdd(remoteAddr, (addr) => new BanEntry { Source = req.RemoteSIPEndPoint });
+
+                if (DateTime.Now.Subtract(banEntry.LastRetransmitAt).TotalMinutes > BAN_RESET_COUNT_AFTER_MINUTES)
+                {
+                    // Reset count.
+                    banEntry.RetransmitCount = 0;
+                }
+
                 banEntry.LastRetransmitAt = DateTime.Now;
                 banEntry.RetransmitCount++;
 
@@ -165,6 +256,13 @@ namespace signalrtc
             if (remoteAddr != null && IsPrivateSubnet?.Invoke(remoteAddr) == false)
             {
                 var banEntry = _banList.GetOrAdd(remoteAddr, (addr) => new BanEntry { Source = resp.RemoteSIPEndPoint });
+
+                if (DateTime.Now.Subtract(banEntry.LastRetransmitAt).TotalMinutes > BAN_RESET_COUNT_AFTER_MINUTES)
+                {
+                    // Reset count.
+                    banEntry.RetransmitCount = 0;
+                }
+
                 banEntry.LastRetransmitAt = DateTime.Now;
                 banEntry.RetransmitCount++;
 
@@ -184,11 +282,17 @@ namespace signalrtc
                 {
                     banEntry.BanReason = BanReasonsEnum.ExcessiveRetrasnmits;
                 }
+                else if (banEntry.AcceptCallFailures >= BAN_THRESHOLD_ACCEPT_CALL_FAILURE_COUNT)
+                {
+                    banEntry.BanReason = BanReasonsEnum.ExcessiveAcceptCallFailures;
+                }
 
                 if (banEntry.BanReason != BanReasonsEnum.None)
                 {
                     banEntry.BannedAt = DateTime.Now;
-                    logger.LogWarning($"Banning {banEntry.Source} for {banEntry.BanReason}");
+                    banEntry.BanCounts++;
+                    banEntry.BanDurationMinutes = BanEntry.BAN_DURATION_STEP_MINUTES * banEntry.BanCounts;
+                    logger.LogWarning($"Banning {banEntry.Source} for {banEntry.BanReason} duration {banEntry.BanDurationMinutes} minutes.");
                 }
             }
         }

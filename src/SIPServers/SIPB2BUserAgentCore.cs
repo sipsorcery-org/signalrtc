@@ -27,6 +27,12 @@ using signalrtc.DataAccess;
 
 namespace signalrtc
 {
+    public enum CallFailureEnum
+    {
+        NotFound,
+        NoSIPAccount
+    }
+
     /// <summary>
     /// This class acts as a server agent that processes incoming calls (INVITE requests)
     /// by acting as a Back-to-Back User Agent (B2BUA). 
@@ -56,6 +62,12 @@ namespace signalrtc
         private SIPCallManager _sipCallManager;
         private SIPDialPlanManager _sipdialPlan;
         private SIPDomainManager _sipDomainManager;
+
+        /// <summary>
+        /// This event fires when an incoming call request is not accepted by the server side of 
+        /// the B2BUA core.
+        /// </summary>
+        public event Action<SIPEndPoint, CallFailureEnum> OnAcceptCallFailure;
 
         public SIPB2BUserAgentCore(
             SIPTransport sipTransport,
@@ -183,6 +195,8 @@ namespace signalrtc
                     {
                         Logger.LogWarning($"B2B no SIP account found for caller {invReq.Header.From.FromURI.User}@{canonicalDomain}, rejecting.");
                         uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.Forbidden, null));
+
+                        OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NoSIPAccount);
                     }
 
                     return sipAccount;
@@ -218,6 +232,8 @@ namespace signalrtc
 
                     var notFoundResp = SIPResponse.GetResponse(uasTx.TransactionRequest, SIPResponseStatusCodesEnum.NotFound, null);
                     uasTx.SendFinalResponse(notFoundResp);
+
+                    OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NotFound);
                 }
                 else
                 {
