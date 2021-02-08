@@ -29,7 +29,8 @@
 
 <p>The purpose of this demonstration is to allow SIP and WebRTC experimentation and testing. It should not be used for production purposes.</p>
 
-<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to access your free SIP Account.</p>
+<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to create your free SIP Account. Note that
+    you don't need a SIP account unless you'd like to test SIP registrations or authenticated SIP calls. The destinations in the SIP dial plan are all publicly accessible.</p>
 
 <h1>SIP Features</h1>
 
@@ -71,26 +72,43 @@
 </ul>
 
 
-<h1>Additional Integrations</h1>
+<h1>Media Server Integrations</h1>
 
 <p>
     The signalrtc application is, as the name implies, used for signaling only. To create and consume audio and video streams additional servers are needed.
-    Hosting additional servers can be done but adds to the hosting costs. If you would like to see a particular server integrated for experimentation or
-    testing feel free to open an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> and consider 
-    <a target="_blank" href="https://github.com/sponsors/sipsorcery"></a>sponsoring</a> the project to help with the costs.
+    The primary purpose of integrating various media servers is to check interoperability of the SDP negotiation and the media transport.
 </p>
 
-<p>Currently the servers below are hosted and are accessible via the dial plan or WebRTC REST signaling controller:</p>
+<p>
+    The goal is to provide 4 interoperability tests per server:
+</p>
 
 <ul>
-    <li><a target="_blank" href="https://asterisk.org">Asterisk</a></li>
-    <li><a target="_blank" href="https://janus.conf.meetecho.com/">Janus</a></li>
+    <li>IPv4 Hello World: This test is to verify an audio and/or video stream can be received from the server.</li>
+    <li>IPv4 Echo Test: This test is to verify an audio and/or video stream can be sent to the server.</li>
+    <li>IPv6 Hello World: Same as the previous Hello World test but over IPv4.</li>
+    <li>IPv6 Echo Test: Same as the previous Echo test but over IPv6.</li>
 </ul>
 
-<p>Additional servers that may be integrated depending on time, resources and interest:</p>
+<p>
+    <strong>
+        Hosting additional servers can be done but adds to the hosting costs. If you would like to see a particular server integrated for experimentation or
+        testing feel free to open an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> and consider
+        <a target="_blank" href="https://github.com/sponsors/sipsorcery"></a>sponsoring</a> the project to help with the costs.
+    </strong>
+</p>
+
+<p>Currently the servers below are hosted and are accessible for the tests listed above via the dial plan or WebRTC REST signaling controller:</p>
 
 <ul>
-    <li><a target="_blank" href="https://freeswitch.com/">FreeSWITCH</a></li>
+    <li><a target="_blank" href="https://asterisk.org">Asterisk</a> v18.2.0</li>
+    <li><a target="_blank" href="https://freeswitch.com/">FreeSWITCH</a> v1.10.5</li>
+    <li><a target="_blank" href="https://janus.conf.meetecho.com/">Janus</a> master (commit ID 24a0eec87ba52b35824862ca1150904f48454f39 4 Feb 2021)</li>
+</ul>
+
+<p>Additional media servers that may be integrated depending on time, resources and interest:</p>
+
+<ul>
     <li><a target="_blank" href="https://jitsi.org/">Jitsi</a></li>
     <li><a target="_blank" href="https://www.kurento.org/">Kurento</a></li>
     <li><a target="_blank" href="https://opensips.org/">opensips</a></li>
