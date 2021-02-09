@@ -30,7 +30,7 @@
 
             if (!isClosed) {
                 // Close any existing peer connection.
-                await closePeers();
+                await closePeer();
             }
 
             let signalingUrl = $('#signalingUrl').val();
