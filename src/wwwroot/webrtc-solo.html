@@ -13,19 +13,17 @@
 
         const STUN_URL = "stun:stun.sipsorcery.com";
         const SIGNALING_URL = "https://sipsorcery.cloud/api/webrtcsignal";
-        const ALICE_ID = "alice-" + Math.floor(Math.random() * 1000);
-        const BOB_ID = "bob-" + Math.floor(Math.random() * 1000);
+        const LOCAL_ID = "solo-" + Math.floor(Math.random() * 1000);
         const NOISE_FRAME_WIDTH = 80;
         const NOISE_FRAME_HEIGHT = 60;
 
-        var pcAlice, pcBob;
-        var signalAlice, signalBob;
+        var pc;
+        var signaler;
         var isClosed = true;
 
         $(document).ready(function () {
             $('#signalingUrl').val(SIGNALING_URL);
-            $('#aliceID').val(ALICE_ID);
-            $('#bobID').val(BOB_ID);
+            $('#localID').val(LOCAL_ID);
         });
 
         async function start() {
@@ -36,19 +34,15 @@
             }
 
             let signalingUrl = $('#signalingUrl').val();
-            let aliceSignalingID = $('#aliceID').val();
-            let bobSignalingID = $('#bobID').val();
+            let localID = $('#localID').val();
+            let remoteID = $('#remoteID').val();
 
             // Create teh peer connections.
-            pcAlice = createPeer("#aliceVideoCtl", aliceSignalingID);
-            pcBob = createPeer("#bobVideoCtl", bobSignalingID);
+            pc = createPeer("#videoCtl");
 
             // Start the two signalers.
-            signalAlice = new WebRTCRestSignaler(signalingUrl, aliceSignalingID, bobSignalingID, pcAlice);
-            signalBob = new WebRTCRestSignaler(signalingUrl, bobSignalingID, aliceSignalingID, pcBob, true);
-
-            signalAlice.start();
-            signalBob.start();
+            signaler = new WebRTCRestSignaler(signalingUrl, localID, remoteID, pc);
+            signaler.start();
         }
 
         function createPeer(videoCtlID, localID) {
@@ -79,13 +73,11 @@
             return pc;
         }
 
-        async function closePeers() {
+        async function closePeer() {
             console.log("Closing...")
             isClosed = true;
-            signalAlice?.stop();
-            signalBob?.stop();
-            await pcAlice?.close();
-            await pcBob?.close();
+            signaler?.stop();
+            await pc?.close();
         };
 
         function whiteNoise(width, height) {
@@ -107,40 +99,45 @@
 </head>
 <body>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Alice</th>
-                <th>Bob</th>
-            </tr>
-        </thead>
-        <tr>
-            <td>
-                <video controls autoplay="autoplay" id="aliceVideoCtl" width="640" height="480"></video>
-            </td>
-            <td>
-                <video controls autoplay="autoplay" id="bobVideoCtl" width="640" height="480"></video>
-            </td>
-
-        </tr>
-    </table>
+    <video controls autoplay="autoplay" id="videoCtl" width="640" height="480"></video>
 
     <div>
         <label>Signaling URL:</label> <input type="text" id="signalingUrl" size="40" /><br />
-        <label>Alice ID:</label> <input type="text" id="aliceID" size="10" /><br />
-        <label>Bob ID:</label> <input type="text" id="bobID" size="10" /><br />
+        <label>Local ID:</label> <input type="text" id="localID" size="10" /><br />
+        <label>Remote ID:</label> <input type="text" id="remoteID" size="10" /><br />
         <button type="button" class="btn btn-success" onclick="start();">Start</button>
-        <button type="button" class="btn btn-success" onclick="closePeers();">Close</button>
+        <button type="button" class="btn btn-success" onclick="closePeer();">Close</button>
     </div>
 
     <h2>Usage:</h2>
 
     <p>
-        Click the <strong>start</strong> button to create two peer connections that will attempt to communicate with each other.
+        To establish a WebRTC peer connection open this page in another Browser Tab or Window and set the IDs so that that the Local and Remote IDs are opposite. 
+        The format of the IDs does not matter they just need to be opposite between the two connecting peers.
     </p>
 
+    <p>For example:</p>
+
+    <table border="1">
+        <tr>
+            <th></th>
+            <th>Browser 1</th>
+            <th>Browser 2</th>
+        </tr>
+        <tr>
+            <td>Local ID</td>
+            <td>solo-123</td>
+            <td>solo-456</td>
+        </tr>
+        <tr>
+            <td>Remote ID</td>
+            <td>solo-456</td>
+            <td>solo-123</td>
+        </tr>
+    </table>
+
     <p>
-        If successful the video control in each video control should display white noise.
+        If successful the video control in each browser should display white noise.
     </p>
 
 </body>
