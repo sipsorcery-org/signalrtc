@@ -29,7 +29,8 @@
         var isClosed = true;
 
         window.onload = () => {
-            document.getElementById('signalingUrl').value = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/webrtcsignal/janus`;
+            let host = window.location.hostname.concat((window.location.port != null) ? `:${window.location.port}` : "");
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/api/webrtcsignal/janus`;
         };
 
         async function start() {
