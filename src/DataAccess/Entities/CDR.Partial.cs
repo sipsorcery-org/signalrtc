@@ -3,7 +3,7 @@
 //
 // Description:
 // Represents the Call Detail Record (CDR) entity. This partial class is used 
-// to apply additional properties or metadata to the audo generated CDR class.
+// to apply additional properties or metadata to the auto generated CDR class.
 //
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)

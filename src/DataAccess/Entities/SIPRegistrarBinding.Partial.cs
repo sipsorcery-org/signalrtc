@@ -3,7 +3,7 @@
 //
 // Description:
 // Represents the SIPRegistrarBinding entity. This partial class is used to  
-// apply additional properties or metadata to the audo generated 
+// apply additional properties or metadata to the auto generated 
 // SIPRegistrarBinding class.
 //
 // Author(s):
@@ -48,8 +48,8 @@ namespace signalrtc.DataAccess
         { }
 
         /// <summary></summary>
-        /// <param name="uacRecvdEndPoint">If this is non-null it indicates the contact header should be mangled based on the public socket the register request was demmed
-        /// to have originated from rather then relying on the contact value recieved from the uac.</param>
+        /// <param name="uacRecvdEndPoint">If this is non-null it indicates the contact header should be mangled based on the public socket the register request was deemed
+        /// to have originated from rather then relying on the contact value received from the uac.</param>
         public SIPRegistrarBinding(
             SIPAccount sipAccount,
             SIPURI bindingURI,
@@ -79,7 +79,7 @@ namespace signalrtc.DataAccess
             LastUpdate = DateTime.UtcNow;
 
             // The Contact URI Host is used by registrars as the contact socket for the user so it needs to be changed to reflect the socket
-            // the intial request was received on in order to work around NAT. It's no good just relying on private addresses as a lot of User Agents
+            // the initial request was received on in order to work around NAT. It's no good just relying on private addresses as a lot of User Agents
             // determine their public IP but NOT their public port so they send the wrong port in the Contact header.
             //var mangledURI = SIPURI.Mangle(bindingURI, remoteSIPEndPoint.GetIPEndPoint());
             //MangledContactURI = (mangledURI != null) ? mangledURI.ToString() : null;

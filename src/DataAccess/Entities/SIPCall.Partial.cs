@@ -3,7 +3,7 @@
 //
 // Description:
 // Represents the SIPCall entity. This partial class is used to apply 
-// additional properties or metadata to the audo generated SIPCall class.
+// additional properties or metadata to the auto generated SIPCall class.
 //
 // A SIPCall corresponds to the establishment of a SIP Dialogue between 
 // two SIP user agents.

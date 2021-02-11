@@ -3,7 +3,7 @@
 //
 // Description:
 // Represents the SIPDomain entity. This partial class is used to apply 
-// additional properties or metadata to the audo generated SIPDomain class.
+// additional properties or metadata to the auto generated SIPDomain class.
 //
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)

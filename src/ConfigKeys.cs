@@ -104,5 +104,11 @@ namespace signalrtc
         /// The URL of the Janus Server REST end point.
         /// </summary>
         public const string JANUS_URL = "JanusURL";
+
+        /// <summary>
+        /// The URL for the WebRTC echo test daemon. It can be utilised to create a WebRTC
+        /// echo test session.
+        /// </summary>
+        public const string WEBRTC_ECHOTEST_REST_URL = "WebRTCEchoTestRestURL";
     }
 }

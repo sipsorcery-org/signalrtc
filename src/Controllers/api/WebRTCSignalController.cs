@@ -8,7 +8,7 @@
 // Aaron Clauson (aaron@sipsorcery.com)
 // 
 // History:
-// 26Jan 2021	Aaron Clauson	Created, Dublin, Ireland.
+// 26 Jan 2021	Aaron Clauson	Created, Dublin, Ireland.
 //
 // License: 
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
@@ -251,7 +251,7 @@ namespace signalrtc.Controllers.api
         /// <returns>The SDP answer from Janus.</returns>
         /// <remarks>
         /// Sanity test:
-        /// curl -X POST https://localhost:5001/api/webrtcsignal/janus?duration=10  -H "Content-Type: application/json" -v -d "1234"
+        /// curl -X POST https://localhost:5001/api/webrtcsignal/janus?duration=10 -H "Content-Type: application/json" -v -d "1234"
         /// </remarks>
         [HttpPost("janus")]
         public async Task<ActionResult<string>> JanusEcho([FromBody] string sdp, int duration = MAX_JANUS_ECHO_DURATION)

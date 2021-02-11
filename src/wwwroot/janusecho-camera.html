@@ -1,0 +1,116 @@
+﻿<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+
+    <script type="text/javascript">
+
+        "use strict";
+
+        function RestSignaler(signalUrl) {
+
+            this.sendOffer = async function (offer) {
+                return (await fetch(signalUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(offer.sdp),
+                    headers: { 'Content-Type': 'application/json' }
+                })).text();
+            }
+        }
+
+    </script>
+
+    <script type="text/javascript">
+
+        "use strict";
+
+        const STUN_SERVER = "stun:stun.sipsorcery.com";
+
+        var pc;
+        var isClosed = true;
+
+        window.onload = () => {
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/api/webrtcsignal/janus`;
+        };
+
+        async function start() {
+
+            if (!isClosed) {
+                // Close any existing peer connection.
+                await closePeer();
+            }
+
+            let signalingUrl = document.getElementById('signalingUrl').value;
+
+            // Get the webcam stream.
+            let cameraStm = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            document.getElementById("localVideoCtl").srcObject = cameraStm;
+
+            let signaler = new RestSignaler(signalingUrl);
+
+            // Create the peer connections.
+            pc = createPeer("echoVideoCtl", cameraStm);
+
+            let offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+
+            console.log(`offer:\n${offer.sdp}`);
+
+            let answer = await signaler.sendOffer(offer);
+
+            console.log(`answer:\n${answer}`);
+
+            if (answer != null) {
+                await pc.setRemoteDescription({ type: "answer", sdp: answer });
+            }
+            else {
+                closePeer();
+            }
+        }
+
+        function createPeer(videoCtlID, cameraStm) {
+
+            console.log("Creating peer ...");
+            isClosed = false;
+
+            let pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
+            cameraStm.getTracks().forEach(track => pc.addTrack(track, cameraStm));
+            pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
+
+            return pc;
+        }
+
+        async function closePeer() {
+            console.log("Closing...")
+            isClosed = true;
+            await pc?.close();
+        };
+
+    </script>
+</head>
+<body>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Echo</th>
+            </tr>
+        </thead>
+        <tr>
+            <td>
+                <video controls autoplay="autoplay" id="localVideoCtl" width="320" height="240"></video>
+            </td>
+            <td>
+                <video controls autoplay="autoplay" id="echoVideoCtl" width="320" height="240"></video>
+            </td>
+
+        </tr>
+    </table>
+
+    <div>
+        <label>Signaling URL:</label> <input type="text" id="signalingUrl" size="40" /><br />
+        <button type="button" class="btn btn-success" onclick="start();">Start</button>
+        <button type="button" class="btn btn-success" onclick="closePeer();">Close</button>
+    </div>
+
+</body>

@@ -14,6 +14,7 @@
 //-----------------------------------------------------------------------------
 
 using System.IO;
+using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -147,6 +148,10 @@ namespace signalrtc
                       name: "areas",
                       pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}"
                     );
+
+                endpoints.MapControllerRoute(
+                   name: "echo",
+                   pattern: "echo/{action}/{id}");
 
                 endpoints.MapControllerRoute(
                    name: "default",

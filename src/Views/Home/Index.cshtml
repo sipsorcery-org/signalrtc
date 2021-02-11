@@ -29,10 +29,14 @@
 
 <p>The purpose of this demonstration is to allow SIP and WebRTC experimentation and testing. It should not be used for production purposes.</p>
 
-<p>If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to create your free SIP Account. Note that
-    you don't need a SIP account unless you'd like to test SIP registrations or authenticated SIP calls. The destinations in the SIP dial plan are all publicly accessible.</p>
+<p>
+    If you have a <a target="_blank" href="https://github.com/">GitHub</a> account click <a asp-action="Login">Login</a> to create your free SIP Account. <strong>
+        Note that you don't need a SIP account unless you'd like to test SIP registrations or authenticated SIP calls
+    </strong>.
+    The destinations in the SIP dial plan are all publicly accessible.
+</p>
 
-<h1>SIP Features</h1>
+<h1>SIP Tests</h1>
 
 <p>The server supports the following functions for SIP clients:</p>
 
@@ -52,7 +56,7 @@
     <li>sips:helloworld@sipsorcery.cloud</li>
 </ul>
 
-<hr/>
+<hr />
 
 <textarea id="dialPlanScript" name="dialPlanScript">
 @Model
@@ -62,34 +66,64 @@
 
 <p>If you have a publicly accessible SIP end point that you'd like to add please create an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a> with the URI details.</p>
 
-<h1>WebRTC Features</h1>
+<h1>WebRTC Tests</h1>
 
-<p>The server also supports a basic HTTP REST signalling mechanism for WebRTC peers. See these examples, <a target="_blank" href="webrtc.html">Dual Peer Connection</a> and
-   <a target="_blank" href="webrtc-solo.html">Single Peer Connection</a>.</p>
+<p>This server also supports some WebRTC demos and echo tests for a number of different WebRTC implementations.</p>
 
-<h1>Additional Features</h1>
-
-<p>
-    This demonstration application is hosted on Azure and is automatically deployed using 
-    <a target="_blank" href="https://aaronrc.visualstudio.com/sipsorcery.cloud">Azure DevOps</a>. Additional features can be added by submitting pull
-    requests to one of the open source projects below:
-</p>
+<h6>Browser WebRTC + No Signaling</h6>
 
 <ul>
-    <li><a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">sipsorcery</a>: For SIP, WebRTC and other protocol improvements.</li>
-    <li><a target="_blank" href="https://github.com/sipsorcery-org/signalrtc">signalrtc</a>: For improvements to the ASP.NET Core application and SIP Servers.</li>
+    <li><a target="_blank" href="webrtc.html">Dual Peer Connection</a>: Creates two peer connections within a single browser tab and sends a noise video stream between them.</li>
 </ul>
 
+<h6>Browser WebRTC + HTTP REST Signaling (<a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/blob/master/src/Controllers/api/WebRTCSignalController.cs">source</a>)</h6>
 
-<h1>Media Server Integrations</h1>
+<ul>
+    <li>
+        <a target="_blank" href="webrtc-solo.html">Single Peer Connection</a>: Creates a single peer connection capable of generating a noise video stream.
+        Open this page in two different browser tabs or windows to send the noise video streams between them.
+    </li>
+</ul>
+
+<h6>
+    Browser WebRTC + SIPSorcery WebRTC (echo server (<a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery/blob/master/examples/WebRTCExamples/WebRTCEchoServer/WebRTCEchoService.cs">source</a>) + HTTP GET and POST requests for Signaling
+</h6>
+
+<ul>
+    <li>
+        <a target="_blank" href="sipsorceryecho-noise.html">Noise Echo Test</a>: Sends a noise video stream from the browser to an Echo Server using the
+        <a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">SIPSorcery WebRTC library</a>.
+    </li>
+    <li>
+        <a target="_blank" href="sipsorceryecho-camera.html">Webcam Echo Test</a>: Sends a webcam video feed from the browser to an Echo Server using the
+        <a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">SIPSorcery WebRTC library</a>.
+    </li>
+</ul>
+
+<h6>
+    Browser WebRTC + Janus WebRTC (echo server (<a target="_blank" href="https://janus.conf.meetecho.com/docs/echotest.html">reference</a>) + HTTP POST request for Signaling
+</h6>
+
+<ul>
+    <li>
+        <a target="_blank" href="janusecho-noise.html">Noise Echo Test</a>: Sends a noise video stream from the browser to an Echo Server using the
+        <a target="_blank" href="https://janus.conf.meetecho.com/">Janus WebRTC Server</a>.
+    </li>
+    <li>
+        <a target="_blank" href="janusecho-camera.html">Webcam Echo Test</a>: Sends a webcam video feed from the browser to an Echo Server using the
+        <a target="_blank" href="https://janus.conf.meetecho.com/">Janus WebRTC Server</a>.
+    </li>
+</ul>
+
+<h1>3rd Party Integrations</h1>
 
 <p>
-    The signalrtc application is, as the name implies, used for signaling only. To create and consume audio and video streams additional servers are needed.
-    The primary purpose of integrating various media servers is to check interoperability of the SDP negotiation and the media transport.
+    The signalrtc application is, as the name implies, used for signaling only. To create and consume audio and video streams additional applications or servers are needed.
+    The primary purpose of 3rd party integrations is to check interoperability of the SDP negotiation and the media transport.
 </p>
 
 <p>
-    The goal is to provide 4 interoperability tests per server:
+    For VoIP the goal is to provide 4 interoperability tests per server:
 </p>
 
 <ul>
@@ -98,6 +132,10 @@
     <li>IPv6 Hello World: Same as the previous Hello World test but over IPv4.</li>
     <li>IPv6 Echo Test: Same as the previous Echo test but over IPv6.</li>
 </ul>
+
+<p>
+    For WebRTC the goal is to provide an echo test per server.
+</p>
 
 <p>
     <strong>
@@ -112,17 +150,32 @@
 <ul>
     <li><a target="_blank" href="https://asterisk.org">Asterisk</a> v18.2.0</li>
     <li><a target="_blank" href="https://freeswitch.com/">FreeSWITCH</a> v1.10.5</li>
-    <li><a target="_blank" href="https://janus.conf.meetecho.com/">Janus</a> master (commit
-        <a target="_blank" href="https://github.com/meetecho/janus-gateway/tree/24a0eec87ba52b35824862ca1150904f48454f39">24a0...</a> 4 Feb 2021)</li>
+    <li>
+        <a target="_blank" href="https://janus.conf.meetecho.com/">Janus</a> master (commit
+        <a target="_blank" href="https://github.com/meetecho/janus-gateway/tree/24a0eec87ba52b35824862ca1150904f48454f39">24a0...</a> 4 Feb 2021)
+    </li>
 </ul>
 
-<p>Additional media servers that may be integrated depending on time, resources and interest:</p>
+<h1>Additional Features</h1>
+
+<p>
+    This demonstration application is hosted on Azure and is automatically deployed using
+    <a target="_blank" href="https://aaronrc.visualstudio.com/sipsorcery.cloud">Azure DevOps</a>. Additional features can be added by submitting pull
+    requests to one of the open source projects below:
+</p>
+
+<ul>
+    <li><a target="_blank" href="https://github.com/sipsorcery-org/sipsorcery">sipsorcery</a>: For SIP, WebRTC and other protocol improvements.</li>
+    <li><a target="_blank" href="https://github.com/sipsorcery-org/signalrtc">signalrtc</a>: For improvements to the ASP.NET Core application and SIP and WebRTC Servers.</li>
+</ul>
+
+<p>Additional servers that may be integrated depending on time, resources and interest:</p>
 
 <ul>
     <li><a target="_blank" href="https://jitsi.org/">Jitsi</a></li>
     <li><a target="_blank" href="https://www.kurento.org/">Kurento</a></li>
     <li><a target="_blank" href="https://opensips.org/">opensips</a></li>
-    <li>Others, add an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a></li>
+    <li>Others, add an <a target="_blank" href="https://github.com/sipsorcery-org/signalrtc/issues">issue</a>.</li>
 </ul>
 
 @section Scripts {

@@ -1,0 +1,138 @@
+﻿<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+
+    <script type="text/javascript">
+
+        "use strict";
+
+        function RestSignaler(signalUrl, localID) {
+
+            var offerUrl = `${signalUrl}/offer/${localID}`;
+            var answerUrl = `${signalUrl}/answer/${localID}`;
+            var iceUrl = `${signalUrl}/ice/${localID}`;
+
+            this.LocalID = localID;
+
+            this.getOffer = async function() {
+                return (await fetch(offerUrl)).json();
+            }
+
+            this.sendAnswer = async function (answer) {
+                await fetch(answerUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(answer),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+
+            this.sendIce = async function (candidate) {
+                await fetch(iceUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(candidate),
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        }
+
+    </script>
+
+    <script type="text/javascript">
+
+        "use strict";
+
+        const STUN_SERVER = "stun:stun.sipsorcery.com";
+        const NOISE_FRAME_WIDTH = 640;
+        const NOISE_FRAME_HEIGHT = 480;
+
+        var pc;
+        var isClosed = true;
+
+        window.onload = () => {
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${window.location.hostname}:${window.location.port}/echo`;
+        };
+
+        async function start() {
+
+            if (!isClosed) {
+                // Close any existing peer connection.
+                await closePeer();
+            }
+
+            let signalingUrl = document.getElementById('signalingUrl').value;
+            let localID = "id-" + Math.floor(Math.random() * 1000);
+
+            // Get the webcam stream.
+            let cameraStm = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            document.getElementById("localVideoCtl").srcObject = cameraStm;
+
+            let signaler = new RestSignaler(signalingUrl, localID);
+
+            // Create the peer connections.
+            pc = createPeer("echoVideoCtl", cameraStm, signaler);
+
+            // Create the signaler, get the offer and send the answer back.
+            var offer = await signaler.getOffer();
+
+            if (offer != null) {
+                await pc.setRemoteDescription(offer);
+                let answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                await signaler.sendAnswer(answer);
+            }
+            else {
+                pc.close();
+            }
+        }
+
+        function createPeer(videoCtlID, cameraStm, signaler) {
+
+            console.log("Creating peer ...");
+            isClosed = false;
+
+            let pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
+            cameraStm.getTracks().forEach(track => pc.addTrack(track, cameraStm));
+            pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
+            pc.onicecandidate = evt => {
+                console.log(JSON.stringify(evt.candidate));
+                evt.candidate && signaler.sendIce(evt.candidate);
+            }
+
+            return pc;
+        }
+
+        async function closePeer() {
+            console.log("Closing...")
+            isClosed = true;
+            await pc?.close();
+        };
+
+    </script>
+</head>
+<body>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Echo</th>
+            </tr>
+        </thead>
+        <tr>
+            <td>
+                <video controls autoplay="autoplay" id="localVideoCtl" width="320" height="240"></video>
+            </td>
+            <td>
+                <video controls autoplay="autoplay" id="echoVideoCtl" width="320" height="240"></video>
+            </td>
+
+        </tr>
+    </table>
+
+    <div>
+        <label>Signaling URL:</label> <input type="text" id="signalingUrl" size="40" /><br />
+        <button type="button" class="btn btn-success" onclick="start();">Start</button>
+        <button type="button" class="btn btn-success" onclick="closePeer();">Close</button>
+    </div>
+
+</body>

@@ -3,7 +3,7 @@
 //
 // Description:
 // Represents the SIPAccount entity. This partial class is used to apply 
-// additional properties or metadata to the audo generated SIPAccount class.
+// additional properties or metadata to the auto generated SIPAccount class.
 //
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)
