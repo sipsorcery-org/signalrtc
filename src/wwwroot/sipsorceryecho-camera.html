@@ -49,7 +49,7 @@
         var isClosed = true;
 
         window.onload = () => {
-            let host = window.location.hostname.concat((window.location.port != null) ? `:${window.location.port}` : "");
+            let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
             document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/echo`;
         };
 
