@@ -24,9 +24,12 @@
         "use strict";
 
         const STUN_SERVER = "stun:stun.sipsorcery.com";
+        const ICE_GATHERING_TIMEOUT = 3000;
 
         var pc;
+        var signaler;
         var isClosed = true;
+        var isOfferSent = false;
 
         window.onload = () => {
             let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
@@ -46,7 +49,7 @@
             let cameraStm = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
             document.getElementById("localVideoCtl").srcObject = cameraStm;
 
-            let signaler = new RestSignaler(signalingUrl);
+            signaler = new RestSignaler(signalingUrl);
 
             // Create the peer connections.
             pc = createPeer("echoVideoCtl", cameraStm);
@@ -55,23 +58,34 @@
                 console.log(`onicegatheringstatechange: ${pc.iceGatheringState}.`);
 
                 if (pc.iceGatheringState === 'complete') {
-                    var offerWithIce = pc.localDescription;
-                    console.log(offerWithIce);
-                    var answer = await signaler.sendOffer(offerWithIce);
-
-                    if (answer != null) {
-                        console.log(answer.sdp)
-                        await pc.setRemoteDescription(answer);
-                    }
-                    else {
-                        console.log("Failed to get an answer from the Echo Test server.")
-                        pc.close();
-                    }
+                    sendOffer();
                 }
             }
 
             let offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
+
+            setTimeout(sendOffer, ICE_GATHERING_TIMEOUT);
+        }
+
+        async function sendOffer() {
+
+            if (!isOfferSent) {
+                isOfferSent = true;
+
+                var offerWithIce = pc.localDescription;
+                console.log(offerWithIce);
+                var answer = await signaler.sendOffer(offerWithIce);
+
+                if (answer != null) {
+                    console.log(answer.sdp)
+                    await pc.setRemoteDescription(answer);
+                }
+                else {
+                    console.log("Failed to get an answer from the Echo Test server.")
+                    pc.close();
+                }
+            }
         }
 
         function createPeer(videoCtlID, cameraStm) {
