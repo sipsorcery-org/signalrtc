@@ -3,7 +3,7 @@
 //
 // Description: An API controller that passes through requests to a WebRTC 
 // echo test daemon. The reason to use this controller is to allow the 
-// echo test service to operate on a well knownend point.
+// echo test service to operate on a well known end point.
 //
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)
@@ -111,6 +111,39 @@ namespace signalrtc.Controllers
             _logger.LogDebug($"Echo controller post ice response {postResp.StatusCode}:{postResp.ReasonPhrase}.");
 
             return postResp.IsSuccessStatusCode ? Ok() : BadRequest(postResp.ReasonPhrase);
+        }
+
+        /// <summary>
+        /// An alternative first step in an echo test. The client peer needs to supply its SDP offer which 
+        /// will be forwarded to the echo test daemon. The SDP answer from the daemon will be returned to
+        /// the client.
+        /// </summary>
+        /// <param name="offer">The JSON encoded SDP offer from the WebRTC client peer.</param>
+        /// <remarks>
+        /// Sanity Test:
+        /// curl -X POST https://localhost:5001/echo/offer -H "Content-Type: application/json" -v -d "1234"
+        /// </remarks>
+        [HttpPost("offer")]
+        public async Task<ActionResult<string>> Offer([FromBody] RTCSessionDescriptionInit offer)
+        {
+            _logger.LogDebug($"Echo controller posting offer to {_echoTestRestUrl}/offer.");
+            _logger.LogDebug($"Offer={offer}");
+
+            HttpClient client = new HttpClient();
+            var postResp = await client.PostAsync($"{_echoTestRestUrl}/offer", new StringContent(offer.toJSON(), Encoding.UTF8, REST_CONTENT_TYPE));
+
+            _logger.LogDebug($"Echo controller post offer response {postResp.StatusCode}:{postResp.ReasonPhrase}.");
+
+            if (postResp.IsSuccessStatusCode)
+            {
+                var answer = await postResp.Content.ReadAsStringAsync();
+                _logger.LogDebug($"Answer: {answer}.");
+                return answer;
+            }
+            else
+            {
+                return BadRequest(postResp.ReasonPhrase);
+            }
         }
     }
 }
