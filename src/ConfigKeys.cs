@@ -106,9 +106,14 @@ namespace signalrtc
         public const string JANUS_URL = "JanusURL";
 
         /// <summary>
-        /// The URL for the WebRTC echo test daemon. It can be utilised to create a WebRTC
-        /// echo test session.
+        /// The URL for the SIPSorcery WebRTC echo test daemon. It can be utilised to create
+        /// a WebRTC echo test session.
         /// </summary>
-        public const string WEBRTC_ECHOTEST_REST_URL = "WebRTCEchoTestRestURL";
+        public const string SIPSORCERY_ECHOTEST_REST_URL = "SIPSorceryEchoTestRestURL";
+
+        /// <summary>
+        /// The URL for the aiortc Python daemon functioning as a WebRTC echo test.
+        /// </summary>
+        public const string AIORTC_ECHOTEST_REST_URL = "AioRTCEchoTestURL";
     }
 }

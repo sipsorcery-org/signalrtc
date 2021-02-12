@@ -24,13 +24,15 @@
         "use strict";
 
         const STUN_SERVER = "stun:stun.sipsorcery.com";
+        const NOISE_FRAME_WIDTH = 80;
+        const NOISE_FRAME_HEIGHT = 60;
 
         var pc;
         var isClosed = true;
 
         window.onload = () => {
             let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
-            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/echo/offer`;
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/janus/echo/offer`;
         };
 
         async function start() {
@@ -42,39 +44,40 @@
 
             let signalingUrl = document.getElementById('signalingUrl').value;
 
-            // Get the webcam stream.
-            let cameraStm = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-            document.getElementById("localVideoCtl").srcObject = cameraStm;
+            // Create the noise.
+            let noiseStm = whiteNoise(NOISE_FRAME_WIDTH, NOISE_FRAME_HEIGHT);
+            document.getElementById("localVideoCtl").srcObject = noiseStm;
 
             let signaler = new RestSignaler(signalingUrl);
 
             // Create the peer connections.
-            pc = createPeer("echoVideoCtl", cameraStm);
+            pc = createPeer("echoVideoCtl", noiseStm);
 
             let offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            var answer = await signaler.sendOffer(offer);
+            console.log(`offer:\n${offer.sdp}`);
+
+            let answer = await signaler.sendOffer(offer);
+
+            console.log(`answer:\n${answer.sdp}`);
 
             if (answer != null) {
-                console.log(answer.sdp)
                 await pc.setRemoteDescription(answer);
             }
             else {
-                console.log("Failed to get an answer from the Echo Test server.")
-                pc.close();
+                closePeer();
             }
         }
 
-        function createPeer(videoCtlID, cameraStm) {
+        function createPeer(videoCtlID, noiseStm) {
 
             console.log("Creating peer ...");
             isClosed = false;
 
             let pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
-            cameraStm.getTracks().forEach(track => pc.addTrack(track, cameraStm));
+            noiseStm.getTracks().forEach(track => pc.addTrack(track, noiseStm));
             pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
-            pc.onicecandidate = evt => evt.candidate && console.log(evt.candidate);
 
             return pc;
         }
@@ -84,6 +87,25 @@
             isClosed = true;
             await pc?.close();
         };
+
+        function whiteNoise(width, height) {
+            const canvas = Object.assign(document.createElement("canvas"), { width, height });
+            const ctx = canvas.getContext('2d');
+            ctx.fillRect(0, 0, width, height);
+            const p = ctx.getImageData(0, 0, width, height);
+            requestAnimationFrame(function draw() {
+                if (!isClosed) {
+                    for (var i = 0; i < p.data.length; i++) {
+                        p.data[i++] = Math.random() * 255;
+                        p.data[i++] = Math.random() * 255;
+                        p.data[i++] = Math.random() * 255;
+                    }
+                    ctx.putImageData(p, 0, 0);
+                    requestAnimationFrame(draw);
+                }
+            });
+            return canvas.captureStream();
+        }
 
     </script>
 </head>

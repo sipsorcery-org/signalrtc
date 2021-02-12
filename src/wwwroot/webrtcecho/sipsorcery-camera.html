@@ -11,9 +11,9 @@
             this.sendOffer = async function (offer) {
                 return (await fetch(signalUrl, {
                     method: 'POST',
-                    body: JSON.stringify(offer.sdp),
+                    body: JSON.stringify(offer),
                     headers: { 'Content-Type': 'application/json' }
-                })).text();
+                })).json();
             }
         }
 
@@ -30,7 +30,7 @@
 
         window.onload = () => {
             let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
-            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/api/webrtcsignal/janus`;
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/sipsorcery/echo/offer`;
         };
 
         async function start() {
@@ -54,17 +54,15 @@
             let offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
 
-            console.log(`offer:\n${offer.sdp}`);
-
-            let answer = await signaler.sendOffer(offer);
-
-            console.log(`answer:\n${answer}`);
+            var answer = await signaler.sendOffer(offer);
 
             if (answer != null) {
-                await pc.setRemoteDescription({ type: "answer", sdp: answer });
+                console.log(answer.sdp)
+                await pc.setRemoteDescription(answer);
             }
             else {
-                closePeer();
+                console.log("Failed to get an answer from the Echo Test server.")
+                pc.close();
             }
         }
 
@@ -76,6 +74,7 @@
             let pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
             cameraStm.getTracks().forEach(track => pc.addTrack(track, cameraStm));
             pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
+            pc.onicecandidate = evt => evt.candidate && console.log(evt.candidate);
 
             return pc;
         }

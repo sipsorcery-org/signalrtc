@@ -32,7 +32,7 @@
 
         window.onload = () => {
             let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
-            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/echo/offer`;
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/aiortc/echo/offer`;
         };
 
         async function start() {
@@ -53,19 +53,27 @@
             // Create the peer connections.
             pc = createPeer("echoVideoCtl", noiseStm);
 
+            pc.onicegatheringstatechange = async () => {
+                console.log(`onicegatheringstatechange: ${pc.iceGatheringState}.`);
+
+                if (pc.iceGatheringState === 'complete') {
+                    var offerWithIce = pc.localDescription;
+                    console.log(offerWithIce);
+                    var answer = await signaler.sendOffer(offerWithIce);
+
+                    if (answer != null) {
+                        console.log(answer.sdp)
+                        await pc.setRemoteDescription(answer);
+                    }
+                    else {
+                        console.log("Failed to get an answer from the Echo Test server.")
+                        pc.close();
+                    }
+                }
+            }
+
             let offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
-            var answer = await signaler.sendOffer(offer);
-
-            if (answer != null) {
-                console.log(answer.sdp)
-                await pc.setRemoteDescription(answer);
-            }
-            else {
-                console.log("Failed to get an answer from the Echo Test server.")
-                pc.close();
-            }
         }
 
         function createPeer(videoCtlID, noiseStm) {
@@ -77,6 +85,12 @@
             noiseStm.getTracks().forEach(track => pc.addTrack(track, noiseStm));
             pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
             pc.onicecandidate = evt => evt.candidate && console.log(evt.candidate);
+
+            // Diagnostics.
+            pc.onicegatheringstatechange = () => console.log(`onicegatheringstatechange: ${pc.iceGatheringState}.`);
+            pc.oniceconnectionstatechange = () => console.log(`oniceconnectionstatechange: ${pc.iceConnectionState}.`);
+            pc.onsignalingstatechange = () => console.log(`onsignalingstatechange: ${pc.signalingState}.`);
+            pc.onconnectionstatechange = () => console.log(`onconnectionstatechange: ${pc.connectionState}.`);
 
             return pc;
         }

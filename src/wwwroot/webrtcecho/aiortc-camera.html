@@ -11,9 +11,9 @@
             this.sendOffer = async function (offer) {
                 return (await fetch(signalUrl, {
                     method: 'POST',
-                    body: JSON.stringify(offer.sdp),
+                    body: JSON.stringify(offer),
                     headers: { 'Content-Type': 'application/json' }
-                })).text();
+                })).json();
             }
         }
 
@@ -24,15 +24,13 @@
         "use strict";
 
         const STUN_SERVER = "stun:stun.sipsorcery.com";
-        const NOISE_FRAME_WIDTH = 80;
-        const NOISE_FRAME_HEIGHT = 60;
 
         var pc;
         var isClosed = true;
 
         window.onload = () => {
             let host = window.location.hostname.concat(window.location.port ? `:${window.location.port}` : "");
-            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/api/webrtcsignal/janus`;
+            document.getElementById('signalingUrl').value = `${window.location.protocol}//${host}/aiortc/echo/offer`;
         };
 
         async function start() {
@@ -44,40 +42,47 @@
 
             let signalingUrl = document.getElementById('signalingUrl').value;
 
-            // Create the noise.
-            let noiseStm = whiteNoise(NOISE_FRAME_WIDTH, NOISE_FRAME_HEIGHT);
-            document.getElementById("localVideoCtl").srcObject = noiseStm;
+            // Get the webcam stream.
+            let cameraStm = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            document.getElementById("localVideoCtl").srcObject = cameraStm;
 
             let signaler = new RestSignaler(signalingUrl);
 
             // Create the peer connections.
-            pc = createPeer("echoVideoCtl", noiseStm);
+            pc = createPeer("echoVideoCtl", cameraStm);
+
+            pc.onicegatheringstatechange = async () => {
+                console.log(`onicegatheringstatechange: ${pc.iceGatheringState}.`);
+
+                if (pc.iceGatheringState === 'complete') {
+                    var offerWithIce = pc.localDescription;
+                    console.log(offerWithIce);
+                    var answer = await signaler.sendOffer(offerWithIce);
+
+                    if (answer != null) {
+                        console.log(answer.sdp)
+                        await pc.setRemoteDescription(answer);
+                    }
+                    else {
+                        console.log("Failed to get an answer from the Echo Test server.")
+                        pc.close();
+                    }
+                }
+            }
 
             let offer = await pc.createOffer();
             await pc.setLocalDescription(offer);
-
-            console.log(`offer:\n${offer.sdp}`);
-
-            let answer = await signaler.sendOffer(offer);
-
-            console.log(`answer:\n${answer}`);
-
-            if (answer != null) {
-                await pc.setRemoteDescription({ type: "answer", sdp: answer });
-            }
-            else {
-                closePeer();
-            }
         }
 
-        function createPeer(videoCtlID, noiseStm) {
+        function createPeer(videoCtlID, cameraStm) {
 
             console.log("Creating peer ...");
             isClosed = false;
 
             let pc = new RTCPeerConnection({ iceServers: [{ urls: STUN_SERVER }] });
-            noiseStm.getTracks().forEach(track => pc.addTrack(track, noiseStm));
+            cameraStm.getTracks().forEach(track => pc.addTrack(track, cameraStm));
             pc.ontrack = evt => document.getElementById(videoCtlID).srcObject = evt.streams[0];
+            pc.onicecandidate = evt => evt.candidate && console.log(evt.candidate);
 
             return pc;
         }
@@ -87,25 +92,6 @@
             isClosed = true;
             await pc?.close();
         };
-
-        function whiteNoise(width, height) {
-            const canvas = Object.assign(document.createElement("canvas"), { width, height });
-            const ctx = canvas.getContext('2d');
-            ctx.fillRect(0, 0, width, height);
-            const p = ctx.getImageData(0, 0, width, height);
-            requestAnimationFrame(function draw() {
-                if (!isClosed) {
-                    for (var i = 0; i < p.data.length; i++) {
-                        p.data[i++] = Math.random() * 255;
-                        p.data[i++] = Math.random() * 255;
-                        p.data[i++] = Math.random() * 255;
-                    }
-                    ctx.putImageData(p, 0, 0);
-                    requestAnimationFrame(draw);
-                }
-            });
-            return canvas.captureStream();
-        }
 
     </script>
 </head>

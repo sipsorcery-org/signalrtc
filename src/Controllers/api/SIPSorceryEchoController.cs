@@ -1,8 +1,8 @@
 ﻿//-----------------------------------------------------------------------------
-// Filename: EchoController.cs
+// Filename: SIPSorceryEchoController.cs
 //
-// Description: An API controller that passes through requests to a WebRTC 
-// echo test daemon. The reason to use this controller is to allow the 
+// Description: An API controller that passes through requests to a SIPSorcery 
+// WebRTC echo test daemon. The reason to use this controller is to allow the 
 // echo test service to operate on a well known end point.
 //
 // Author(s):
@@ -27,21 +27,21 @@ using SIPSorcery.Net;
 namespace signalrtc.Controllers
 {
     [EnableCors(Startup.CORS_POLICY_NAME)]
-    [Route("echo")]
+    [Route("sipsorcery/echo")]
     [ApiController]
-    public class EchoController : ControllerBase
+    public class SIPSorceryEchoController : ControllerBase
     {
         private const string REST_CONTENT_TYPE = "application/json";
 
-        private ILogger<EchoController> _logger;
+        private ILogger<SIPSorceryEchoController> _logger;
 
         private readonly string _echoTestRestUrl;
 
-        public EchoController(IConfiguration config,
-            ILogger<EchoController> logger)
+        public SIPSorceryEchoController(IConfiguration config,
+            ILogger<SIPSorceryEchoController> logger)
         {
             _logger = logger;
-            _echoTestRestUrl = config[ConfigKeys.WEBRTC_ECHOTEST_REST_URL];
+            _echoTestRestUrl = config[ConfigKeys.SIPSORCERY_ECHOTEST_REST_URL];
         }
 
         /// <summary>
@@ -121,7 +121,7 @@ namespace signalrtc.Controllers
         /// <param name="offer">The JSON encoded SDP offer from the WebRTC client peer.</param>
         /// <remarks>
         /// Sanity Test:
-        /// curl -X POST https://localhost:5001/echo/offer -H "Content-Type: application/json" -v -d "1234"
+        /// curl -X POST https://localhost:5001/sipsorcery/echo/offer -H "Content-Type: application/json" -v -d "1234"
         /// </remarks>
         [HttpPost("offer")]
         public async Task<ActionResult<string>> Offer([FromBody] RTCSessionDescriptionInit offer)
