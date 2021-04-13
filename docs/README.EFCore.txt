@@ -28,7 +28,7 @@ dotnet ef dbcontext scaffold --use-database-names -o DataAccess/AutoGen --contex
 ==> Reference for Using DbContextFactory (typically only DbContext is used with ASP.NET Core dependency injection)
 https://docs.microsoft.com/en-us/ef/core/dbcontext-configuration/#using-a-dbcontext-factory-eg-for-blazor
 
-==> Using distributed session cache for SQL Server 
+==> Using distributed web session cache for SQL Server 
 https://docs.microsoft.com/en-us/aspnet/core/performance/caching/distributed?view=aspnetcore-5.0#distributed-sql-server-cache
 dotnet tool install --global dotnet-sql-cache
 dotnet sql-cache create "Data Source=localhost;Initial Catalog=SIPAssets;Persist Security Info=True;User ID=appuser;Password=password;" dbo SessionCache
