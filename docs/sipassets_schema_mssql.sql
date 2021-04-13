@@ -28,7 +28,7 @@ create table SIPAccounts
  DomainID uniqueidentifier not null,
  SIPDialPlanID uniqueidentifier null,
  SIPUsername nvarchar(32) not null,
- SIPPassword nvarchar(32) not null,
+ HA1Digest nvarchar(32) not null,
  IsDisabled bit not null default 0,
  Inserted datetime not null default sysdatetime(),
  Primary Key(ID),
