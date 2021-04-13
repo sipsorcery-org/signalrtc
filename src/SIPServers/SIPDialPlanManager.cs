@@ -136,10 +136,10 @@ public static class DialPlanScript
             //_logger.LogDebug($"Our dialplan last update {TrimMilliseconds(_dialplanLastUpdated).ToString("o")}, " +
             //    $"database last update {TrimMilliseconds(dialplan.LastUpdate).ToString("o")}.");
 
-            if (dialplan != null && TrimMilliseconds(dialplan.LastUpdate) > TrimMilliseconds(_dialplanLastUpdated))
+            if (dialplan != null && TrimMilliseconds(DateTime.Parse(dialplan.LastUpdate)) > TrimMilliseconds(_dialplanLastUpdated))
             {
                 _logger.LogInformation($"SIP DialPlan Manager loading updated dialplan.");
-                CompileDialPlan(dialplan.DialPlanScript, dialplan.LastUpdate);
+                CompileDialPlan(dialplan.DialPlanScript, DateTime.Parse(dialplan.LastUpdate));
             }
 
             if (_dialPlanScriptRunner != null)

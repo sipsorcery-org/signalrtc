@@ -47,18 +47,18 @@ namespace signalrtc
 
             // DB Context factory is used by the SIP servers.
             services.AddDbContextFactory<SIPAssetsDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
+                options.UseSqlite(Configuration.GetConnectionString("SIPAssetsLite")));
 
             // DB Context is used directly by web API controllers.
             services.AddDbContext<SIPAssetsDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("SIPAssets")));
+                options.UseSqlite(Configuration.GetConnectionString("SIPAssetsLite")));
 
-            services.AddDistributedSqlServerCache(opts =>
-            {
-                opts.ConnectionString = Configuration.GetConnectionString("SIPAssets");
-                opts.SchemaName = "dbo";
-                opts.TableName = "SessionCache";
-            });
+            //services.AddDistributedSqlServerCache(opts =>
+            //{
+            //    opts.ConnectionString = Configuration.GetConnectionString("SIPAssetsLite");
+            //    opts.SchemaName = "dbo";
+            //    opts.TableName = "SessionCache";
+            //});
 
             services.AddSession(options =>
             {

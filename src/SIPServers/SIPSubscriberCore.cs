@@ -156,7 +156,11 @@ namespace signalrtc
                 }
                 else
                 {
-                    SIPRequestAuthenticationResult authenticationResult = SIPRequestAuthenticator.AuthenticateSIPRequest(req.LocalSIPEndPoint, req.RemoteSIPEndPoint, req, sipAccount);
+                    SIPRequestAuthenticationResult authenticationResult = SIPRequestAuthenticator.AuthenticateSIPRequest(
+                        req.LocalSIPEndPoint, 
+                        req.RemoteSIPEndPoint, 
+                        req, 
+                        sipAccount.ToSIPAccountModel());
 
                     if (!authenticationResult.Authenticated)
                     {
@@ -181,7 +185,7 @@ namespace signalrtc
 
                         if (req.Header.Expires > 0)
                         {
-                            SendInitialNotification(req, sipAccount);
+                            SendInitialNotification(req, sipAccount.ToSIPAccountModel());
                         }
                     }
                 }

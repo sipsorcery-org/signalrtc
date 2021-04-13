@@ -37,13 +37,13 @@ namespace signalrtc.DataAccess
         /// <param name="dialogue">The SIP layer dialogue to translate.</param>
         public SIPCall(SIPDialogue dialogue)
         {
-            ID = dialogue.Id;
-            CDRID = dialogue.CDRId != Guid.Empty ? dialogue.CDRId : null;
+            ID = dialogue.Id.ToString();
+            CDRID = dialogue.CDRId != Guid.Empty ? dialogue.CDRId.ToString() : null;
             LocalTag = dialogue.LocalTag;
             RemoteTag = dialogue.RemoteTag;
             CallID = dialogue.CallId;
             CSeq = dialogue.CSeq;
-            BridgeID = dialogue.BridgeId;
+            BridgeID = dialogue.BridgeId.ToString();
             RemoteTarget = dialogue.RemoteTarget.ToString();
             LocalUserField = dialogue.LocalUserField.ToString();
             RemoteUserField = dialogue.RemoteUserField.ToString();
@@ -51,7 +51,7 @@ namespace signalrtc.DataAccess
             RouteSet = dialogue.RouteSet?.ToString();
             CallDurationLimit = dialogue.CallDurationLimit;
             Direction = dialogue.Direction.ToString();
-            Inserted = dialogue.Inserted;
+            Inserted = dialogue.Inserted.ToString("o");
             RemoteSocket = dialogue.RemoteSIPEndPoint?.ToString();
         }
 
@@ -62,21 +62,21 @@ namespace signalrtc.DataAccess
         {
             SIPDialogue dialogue = new SIPDialogue();
 
-            dialogue.Id = ID;
-            dialogue.CDRId = CDRID.GetValueOrDefault();
+            dialogue.Id = !string.IsNullOrEmpty(ID) ? new Guid(ID) : Guid.Empty;
+            dialogue.CDRId = !string.IsNullOrEmpty(CDRID) ? new Guid(CDRID) : Guid.Empty;
             dialogue.LocalTag= LocalTag;
             dialogue.RemoteTag = RemoteTag;
             dialogue.CallId = CallID;
-            dialogue.CSeq = CSeq;
-            dialogue.BridgeId = BridgeID;
+            dialogue.CSeq = (int)CSeq;
+            dialogue.BridgeId = !string.IsNullOrEmpty(BridgeID) ? new Guid(BridgeID) : Guid.Empty;
             dialogue.RemoteTarget = SIPURI.ParseSIPURIRelaxed(RemoteTarget);
             dialogue.LocalUserField = SIPUserField.ParseSIPUserField(LocalUserField);
             dialogue.RemoteUserField = SIPUserField.ParseSIPUserField(RemoteUserField);
             dialogue.ProxySendFrom = ProxySendFrom;
             dialogue.RouteSet = string.IsNullOrWhiteSpace(RouteSet) ? null : SIPRouteSet.ParseSIPRouteSet(RouteSet);
-            dialogue.CallDurationLimit = CallDurationLimit.GetValueOrDefault();
+            dialogue.CallDurationLimit = (int)CallDurationLimit.GetValueOrDefault();
             dialogue.Direction = Enum.Parse<SIPCallDirection>(Direction, true);
-            dialogue.Inserted = Inserted;
+            dialogue.Inserted = DateTime.Parse(Inserted);
             dialogue.RemoteSIPEndPoint = (RemoteSocket != null) ? SIPEndPoint.ParseSIPEndPoint(RemoteSocket) : null;
 
             return dialogue;

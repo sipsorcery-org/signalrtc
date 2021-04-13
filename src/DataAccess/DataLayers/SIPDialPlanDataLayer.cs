@@ -34,7 +34,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPDialPlans.Where(x => x.ID == id).FirstOrDefaultAsync();
+                return db.SIPDialPlans.Where(x => x.ID == id.ToString()).FirstOrDefaultAsync();
             }
         }
 
@@ -53,7 +53,7 @@ namespace signalrtc.DataAccess
                 var dialplan = await db.SIPDialPlans.FirstOrDefaultAsync();
 
                 dialplan.DialPlanScript = dialPlanScript;
-                dialplan.LastUpdate = lastUpdated;
+                dialplan.LastUpdate = lastUpdated.ToString("o");
 
                 await db.SaveChangesAsync();
             }

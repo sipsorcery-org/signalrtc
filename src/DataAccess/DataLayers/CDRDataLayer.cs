@@ -35,7 +35,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.CDRs.Where(x => x.ID == id).FirstOrDefault();
+                return db.CDRs.Where(x => x.ID == id.ToString()).FirstOrDefault();
             }
         }
 
@@ -45,7 +45,7 @@ namespace signalrtc.DataAccess
 
             using (var db = _dbContextFactory.CreateDbContext())
             {
-               cdr.Inserted = DateTime.UtcNow;
+               cdr.Inserted = DateTime.UtcNow.ToString("o");
 
                 db.CDRs.Add(cdr);
                 db.SaveChanges();
@@ -60,7 +60,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var existing = (from cdr in db.CDRs where cdr.ID == sipCDR.CDRId select cdr).SingleOrDefault();
+                var existing = (from cdr in db.CDRs where cdr.ID == sipCDR.CDRId.ToString() select cdr).SingleOrDefault();
 
                 if (existing == null)
                 {
@@ -77,18 +77,18 @@ namespace signalrtc.DataAccess
                     // From
                     // Call-ID
 
-                    existing.BridgeID = (sipCDR.BridgeId != Guid.Empty) ? sipCDR.BridgeId : null;
-                    existing.InProgressAt = sipCDR.ProgressTime;
+                    existing.BridgeID = (sipCDR.BridgeId != Guid.Empty) ? sipCDR.BridgeId.ToString() : null;
+                    existing.InProgressAt = sipCDR.ProgressTime.GetValueOrDefault().ToString("o");
                     existing.InProgressStatus = sipCDR.ProgressStatus;
                     existing.InProgressReason = sipCDR.ProgressReasonPhrase;
                     existing.RingDuration = sipCDR.GetProgressDuration();
-                    existing.AnsweredAt = sipCDR.AnswerTime;
+                    existing.AnsweredAt = sipCDR.AnswerTime.GetValueOrDefault().ToString("o");
                     existing.AnsweredStatus = sipCDR.AnswerStatus;
                     existing.AnsweredReason = sipCDR.AnswerReasonPhrase;
                     existing.Duration = sipCDR.GetAnsweredDuration();
-                    existing.HungupAt = sipCDR.HangupTime;
+                    existing.HungupAt = sipCDR.HangupTime.GetValueOrDefault().ToString("o");
                     existing.HungupReason = sipCDR.HangupReason;
-                    existing.AnsweredAt = sipCDR.AnsweredAt;
+                    existing.AnsweredAt = sipCDR.AnsweredAt.GetValueOrDefault().ToString("o");
                     existing.RemoteSocket = sipCDR.RemoteEndPoint?.ToString();
                     existing.LocalSocket = sipCDR.LocalSIPEndPoint?.ToString();
 
@@ -101,7 +101,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var existing = db.CDRs.Where(x => x.ID == id).SingleOrDefault();
+                var existing = db.CDRs.Where(x => x.ID == id.ToString()).SingleOrDefault();
 
                 if (existing == null)
                 {
@@ -109,10 +109,12 @@ namespace signalrtc.DataAccess
                 }
                 else
                 {
-                    existing.HungupAt = DateTime.UtcNow;
+                    existing.HungupAt = DateTime.UtcNow.ToString("o");
                     existing.HungupReason = reason;
-                    existing.Duration = Convert.ToInt32(existing.HungupAt.Value.Subtract(existing.AnsweredAt.Value).TotalSeconds);
-
+                    if (!string.IsNullOrEmpty(existing.HungupAt) && !string.IsNullOrEmpty(existing.AnsweredAt))
+                    {
+                        existing.Duration = Convert.ToInt32(DateTime.Parse(existing.HungupAt).Subtract(DateTime.Parse(existing.AnsweredAt)).TotalSeconds);
+                    }
                     db.SaveChanges();
                 }
             }
@@ -122,7 +124,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var existing = db.CDRs.Where(x => x.ID == id).SingleOrDefault();
+                var existing = db.CDRs.Where(x => x.ID == id.ToString()).SingleOrDefault();
 
                 if (existing == null)
                 {
@@ -130,7 +132,7 @@ namespace signalrtc.DataAccess
                 }
                 else
                 {
-                    existing.BridgeID = bridgeID;
+                    existing.BridgeID = bridgeID.ToString();
                     db.SaveChanges();
                 }
             }

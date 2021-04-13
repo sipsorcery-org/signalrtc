@@ -15,9 +15,11 @@
 // BSD 3-Clause "New" or "Revised" License, see included LICENSE.md file.
 // ============================================================================
 
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.AspNetCore.Mvc;
+using signalrtc.Models;
 using SIPSorcery.SIP.App;
 
 #nullable disable
@@ -25,7 +27,7 @@ using SIPSorcery.SIP.App;
 namespace signalrtc.DataAccess
 {
     [ModelMetadataType(typeof(SIPAccountMetadata))]
-    public partial class SIPAccount : ISIPAccount
+    public partial class SIPAccount
     {
         public string SIPDomain => Domain?.Domain;
 
@@ -37,6 +39,18 @@ namespace signalrtc.DataAccess
 
         [NotMapped]
         public string SIPPassword { get; set; }
+
+        public ISIPAccount ToSIPAccountModel()
+        {
+            return new SIPAccountModel
+            {
+                ID = !string.IsNullOrEmpty(ID) ? new Guid(ID) : Guid.Empty,
+                SIPUsername = SIPUsername,
+                HA1Digest = HA1Digest,
+                SIPDomain = SIPDomain,
+                IsDisabled = IsDisabled >= 1
+            };
+        }
     }
 
     public class SIPAccountMetadata

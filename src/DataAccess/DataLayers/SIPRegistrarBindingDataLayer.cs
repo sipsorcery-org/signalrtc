@@ -34,7 +34,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPRegistrarBindings.Where(x => x.SIPAccountID == sipAccountID).ToList();
+                return db.SIPRegistrarBindings.Where(x => x.SIPAccountID == sipAccountID.ToString()).ToList();
             }
         }
 
@@ -42,11 +42,22 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPRegistrarBindings
-                    .Include(x => x.SIPAccount)
-                    .Where(x => x.ExpiryTime <= expiryTime)
-                    .OrderBy(x => x.ExpiryTime)
-                    .FirstOrDefault();
+                if (db.SIPRegistrarBindings.Count() > 0)
+                {
+                    return db.SIPRegistrarBindings.FromSqlRaw("SELECT * FROM SIPRegistrarBindings WHERE ExpiryTime <= {0}", expiryTime.ToString("O"))
+                        .Include(x => x.SIPAccount)
+                        .FirstOrDefault();
+
+                    //return db.SIPRegistrarBindings
+                    //    .Include(x => x.SIPAccount)
+                    //    .Where(x => DateTime.Parse(x.ExpiryTime) <= expiryTime)
+                    //    .OrderBy(x => x.ExpiryTime)
+                    //    .FirstOrDefault();
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
@@ -54,8 +65,8 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                binding.ID = Guid.NewGuid();
-                binding.LastUpdate = DateTime.UtcNow;
+                binding.ID = Guid.NewGuid().ToString();
+                binding.LastUpdate = DateTime.UtcNow.ToString("o");
 
                 db.SIPRegistrarBindings.Add(binding);
                 db.SaveChanges();
@@ -73,16 +84,16 @@ namespace signalrtc.DataAccess
         { 
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var existing = db.SIPRegistrarBindings.Where(x => x.ID == id).SingleOrDefault();
+                var existing = db.SIPRegistrarBindings.Where(x => x.ID == id.ToString()).SingleOrDefault();
 
                 if (existing == null)
                 {
                     throw new ApplicationException("The SIP Registrar Binding to update could not be found.");
                 }
 
-                existing.LastUpdate = DateTime.UtcNow;
+                existing.LastUpdate = DateTime.UtcNow.ToString("o");
                 existing.Expiry = expiry;
-                existing.ExpiryTime = DateTime.UtcNow.AddSeconds(expiry);
+                existing.ExpiryTime = DateTime.UtcNow.AddSeconds(expiry).ToString("o");
                 existing.RemoteSIPSocket = remoteSIPEndPoint?.ToString();
                 existing.ProxySIPSocket = proxySIPEndPoint?.ToString();
                 existing.RegistrarSIPSocket = registrarSIPEndPoint?.ToString();
@@ -97,14 +108,14 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var existing = db.SIPRegistrarBindings.Where(x => x.ID == id).SingleOrDefault();
+                var existing = db.SIPRegistrarBindings.Where(x => x.ID == id.ToString()).SingleOrDefault();
 
                 if (existing == null)
                 {
                     throw new ApplicationException("The SIP Registrar Binding to update could not be found.");
                 }
 
-                existing.LastUpdate = DateTime.UtcNow;
+                existing.LastUpdate = DateTime.UtcNow.ToString("o");
                 existing.Expiry = expiry;
 
                 db.SaveChanges();
@@ -117,7 +128,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var binding = db.SIPRegistrarBindings.Where(x => x.ID == id).SingleOrDefault();
+                var binding = db.SIPRegistrarBindings.Where(x => x.ID == id.ToString()).SingleOrDefault();
                 if (binding != null)
                 {
                     db.SIPRegistrarBindings.Remove(binding);

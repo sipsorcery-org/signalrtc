@@ -31,9 +31,9 @@ namespace signalrtc.DataAccess
         /// <param name="sipCDR">The SIP layer CDR to translate.</param>
         public CDR(SIPCDR sipCDR)
         {
-            ID = sipCDR.CDRId;
+            ID = sipCDR.CDRId.ToString();
             Direction = sipCDR.CallDirection.ToString();
-            Created = sipCDR.Created;
+            Created = sipCDR.Created.ToString("o");
             DstUser = sipCDR.Destination.User;
             DstHost = sipCDR.Destination.Host;
             DstUri = sipCDR.Destination.ToString();
@@ -43,16 +43,16 @@ namespace signalrtc.DataAccess
             CallID = sipCDR.CallId;
             LocalSocket = sipCDR.LocalSIPEndPoint?.ToString();
             RemoteSocket = sipCDR.RemoteEndPoint?.ToString();
-            BridgeID = (sipCDR.BridgeId != Guid.Empty) ? sipCDR.BridgeId : null;
-            InProgressAt = sipCDR.ProgressTime;
+            BridgeID = (sipCDR.BridgeId != Guid.Empty) ? sipCDR.BridgeId.ToString() : null;
+            InProgressAt = sipCDR.ProgressTime.GetValueOrDefault().ToString("o");
             InProgressStatus = sipCDR.ProgressStatus;
             InProgressReason = sipCDR.ProgressReasonPhrase;
             RingDuration = sipCDR.GetProgressDuration();
-            AnsweredAt = sipCDR.AnswerTime;
+            AnsweredAt = sipCDR.AnswerTime.GetValueOrDefault().ToString("o");
             AnsweredStatus = sipCDR.AnswerStatus;
             AnsweredReason = sipCDR.AnswerReasonPhrase;
             Duration = sipCDR.GetAnsweredDuration();
-            HungupAt = sipCDR.HangupTime;
+            HungupAt = sipCDR.HangupTime.GetValueOrDefault().ToString("o");
             HungupReason = sipCDR.HangupReason;
         }
     }

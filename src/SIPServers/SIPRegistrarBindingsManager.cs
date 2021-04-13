@@ -79,7 +79,7 @@ namespace signalrtc
                     while (expiredBinding != null)
                     {
                         Logger.LogDebug("Expired binding deleted for " + expiredBinding.SIPAccount.AOR + " and " + expiredBinding.ContactURI + ", last register " +
-                            expiredBinding.LastUpdate.ToString("o") + ", expiry " + expiredBinding.Expiry + "s, expiry time " + expiredBinding.ExpiryTime.ToString("o") + ", now " + expiryTime.ToString("o") + ".");
+                            expiredBinding.LastUpdate + ", expiry " + expiredBinding.Expiry + "s, expiry time " + expiredBinding.ExpiryTime + ", now " + expiryTime.ToString("o") + ".");
 
                         expiryTime = DateTime.UtcNow.AddSeconds(BINDING_EXPIRY_GRACE_PERIOD * -1);
                         expiredBinding = GetNextExpiredBinding(expiryTime);
@@ -104,14 +104,14 @@ namespace signalrtc
 
                 if (binding != null)
                 {
-                    if (binding.ExpiryTime < DateTime.UtcNow.AddSeconds(BINDING_EXPIRY_GRACE_PERIOD * -1))
+                    if (DateTime.Parse(binding.ExpiryTime) < DateTime.UtcNow.AddSeconds(BINDING_EXPIRY_GRACE_PERIOD * -1))
                     {
-                        m_registrarBindingDataLayer.Delete(binding.ID);
+                        m_registrarBindingDataLayer.Delete(new Guid(binding.ID));
                     }
                     else
                     {
                         Logger.LogWarning("A binding returned from the database as expired wasn't. " + binding.ID + " and " + binding.ContactURI + ", last register " +
-                                binding.LastUpdate.ToString("HH:mm:ss") + ", expiry " + binding.Expiry + ", expiry time " + binding.ExpiryTime.ToString("HH:mm:ss") +
+                                binding.LastUpdate + ", expiry " + binding.Expiry + ", expiry time " + binding.ExpiryTime +
                                 ", checkedtime " + expiryTime.ToString("HH:mm:ss") + ", now " + DateTime.UtcNow.ToString("HH:mm:ss") + ".");
 
                         binding = null;
@@ -156,7 +156,7 @@ namespace signalrtc
             {
                 userAgent = (userAgent != null && userAgent.Length > MAX_USERAGENT_LENGTH) ? userAgent.Substring(0, MAX_USERAGENT_LENGTH) : userAgent;
 
-                List<SIPRegistrarBinding> bindings = m_registrarBindingDataLayer.GetForSIPAccount(sipAccount.ID);
+                List<SIPRegistrarBinding> bindings = m_registrarBindingDataLayer.GetForSIPAccount(new Guid(sipAccount.ID));
 
                 foreach (SIPContactHeader contactHeader in contactHeaders)
                 {
@@ -222,7 +222,7 @@ namespace signalrtc
                             {
                                 Logger.LogDebug($"Binding expired by client for {sipAccountAOR} from {remoteSIPEndPoint}.");
                                 bindings.Remove(binding);
-                                m_registrarBindingDataLayer.Delete(binding.ID);
+                                m_registrarBindingDataLayer.Delete(new Guid(binding.ID));
                                 bindingExpiry = 0;
                             }
                             else
@@ -234,7 +234,7 @@ namespace signalrtc
                                 //DateTime startTime = DateTime.Now;
                                 //m_bindingsPersistor.Update(binding);
                                 //m_registrarBindingDataLayer.Update(binding);
-                                m_registrarBindingDataLayer.RefreshBinding(binding.ID, bindingExpiry, remoteSIPEndPoint, proxySIPEndPoint, registrarSIPEndPoint);
+                                m_registrarBindingDataLayer.RefreshBinding(new Guid(binding.ID), bindingExpiry, remoteSIPEndPoint, proxySIPEndPoint, registrarSIPEndPoint);
                                 //TimeSpan duration = DateTime.Now.Subtract(startTime);
                                 //FireSIPMonitorLogEvent(new SIPMonitorConsoleEvent(SIPMonitorServerTypesEnum.Registrar, SIPMonitorEventTypesEnum.RegistrarTiming, "Binding database update time for " + sipAccountAOR + " took " + duration.TotalMilliseconds + "ms.", null));
                                 //FireSIPMonitorLogEvent(new SIPMonitorMachineEvent(SIPMonitorMachineEventTypesEnum.SIPRegistrarBindingUpdate, sipAccount.Owner, sipAccount.Id.ToString(), SIPURI.ParseSIPURIRelaxed(sipAccountAOR)));
@@ -251,7 +251,7 @@ namespace signalrtc
                                     // Need to remove the oldest binding to stay within limit.
                                     SIPRegistrarBinding oldestBinding = bindings.OrderBy(x => x.LastUpdate).Last();
                                     Logger.LogDebug($"Binding limit exceeded for {sipAccountAOR} from {remoteSIPEndPoint} removing oldest binding to stay within limit of {m_maxBindingsPerAccount}.");
-                                    m_registrarBindingDataLayer.Delete(oldestBinding.ID);
+                                    m_registrarBindingDataLayer.Delete(new Guid(oldestBinding.ID));
                                 }
 
                                 SIPRegistrarBinding newBinding = new SIPRegistrarBinding(sipAccount, bindingURI, callId, cseq, userAgent,
@@ -269,7 +269,7 @@ namespace signalrtc
                     }
                 }
 
-                return m_registrarBindingDataLayer.GetForSIPAccount(sipAccount.ID);
+                return m_registrarBindingDataLayer.GetForSIPAccount(new Guid(sipAccount.ID));
             }
             catch (Exception excp)
             {

@@ -104,8 +104,8 @@ namespace signalrtc.DataAccess
                 }
                 else
                 {
-                    sipAccount.ID = Guid.NewGuid();
-                    sipAccount.Inserted = DateTime.UtcNow;
+                    sipAccount.ID = Guid.NewGuid().ToString();
+                    sipAccount.Inserted = DateTime.UtcNow.ToString("O");
                     sipAccount.DomainID = sipDomain.ID;
                     await db.SIPAccounts.AddAsync(sipAccount);
                     await db.SaveChangesAsync();

@@ -199,7 +199,7 @@ namespace signalrtc
                         OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NoSIPAccount, invReq);
                     }
 
-                    return sipAccount;
+                    return sipAccount.ToSIPAccountModel();
                 }
             }
         }

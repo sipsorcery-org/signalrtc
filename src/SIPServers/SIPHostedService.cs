@@ -202,7 +202,7 @@ namespace signalrtc
                 var dp = await _sipDialPlanManager.LoadDialPlan();
                 if (dp != null)
                 {
-                    _sipDialPlanManager.CompileDialPlan(dp.DialPlanScript, dp.LastUpdate);
+                    _sipDialPlanManager.CompileDialPlan(dp.DialPlanScript, DateTime.Parse(dp.LastUpdate));
                 }
             });
 

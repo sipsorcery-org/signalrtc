@@ -107,7 +107,7 @@ namespace signalrtc.Controllers.api
 
             if (nextSignal != null)
             {
-                nextSignal.DeliveredAt = DateTime.UtcNow;
+                nextSignal.DeliveredAt = DateTime.UtcNow.ToString("o");
                 await _context.SaveChangesAsync();
 
                 return nextSignal.Signal;
@@ -152,12 +152,12 @@ namespace signalrtc.Controllers.api
 
             WebRTCSignal sdpSignal = new WebRTCSignal
             {
-                ID = Guid.NewGuid(),
+                ID = Guid.NewGuid().ToString(),
                 To = to,
                 From = from,
                 SignalType = WebRTCSignalTypesEnum.sdp.ToString(),
                 Signal = sdp.toJSON(),
-                Inserted = DateTime.UtcNow
+                Inserted = DateTime.UtcNow.ToString("o")
             };
 
             _context.WebRTCSignals.Add(sdpSignal);
@@ -198,12 +198,12 @@ namespace signalrtc.Controllers.api
 
             WebRTCSignal iceSignal = new WebRTCSignal
             {
-                ID = Guid.NewGuid(),
+                ID = Guid.NewGuid().ToString(),
                 To = to,
                 From = from,
                 SignalType = WebRTCSignalTypesEnum.ice.ToString(),
                 Signal = ice.toJSON(),
-                Inserted = DateTime.UtcNow
+                Inserted = DateTime.UtcNow.ToString("o")
             };
 
             _context.WebRTCSignals.Add(iceSignal);

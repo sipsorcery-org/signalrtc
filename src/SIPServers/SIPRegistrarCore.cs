@@ -240,7 +240,11 @@ namespace signalrtc
                     }
                     else
                     {
-                        SIPRequestAuthenticationResult authenticationResult = SIPRequestAuthenticator.AuthenticateSIPRequest(registerTransaction.TransactionRequest.LocalSIPEndPoint, registerTransaction.TransactionRequest.RemoteSIPEndPoint, sipRequest, sipAccount);
+                        SIPRequestAuthenticationResult authenticationResult = SIPRequestAuthenticator.AuthenticateSIPRequest(
+                            registerTransaction.TransactionRequest.LocalSIPEndPoint, 
+                            registerTransaction.TransactionRequest.RemoteSIPEndPoint, 
+                            sipRequest, 
+                            sipAccount.ToSIPAccountModel());
 
                         if (!authenticationResult.Authenticated)
                         {
@@ -265,7 +269,7 @@ namespace signalrtc
                             {
                                 // No contacts header to update bindings with, return a list of the current bindings.
                                 //List<SIPRegistrarBinding> bindings = m_registrarBindingsManager.GetBindings(sipAccount.ID);
-                                List<SIPRegistrarBinding> bindings = m_sipRegistrarBindingDataLayer.GetForSIPAccount(sipAccount.ID).ToList();
+                                List<SIPRegistrarBinding> bindings = m_sipRegistrarBindingDataLayer.GetForSIPAccount(new Guid(sipAccount.ID)).ToList();
                                 //List<SIPContactHeader> contactsList = m_registrarBindingsManager.GetContactHeader(); // registration.GetContactHeader(true, null);
                                 if (bindings != null)
                                 {
@@ -359,7 +363,7 @@ namespace signalrtc
                 {
                     if (binding.ContactURI == bindingURI)
                     {
-                        return binding.Expiry;
+                        return (int)binding.Expiry;
                     }
                 }
                 return -1;
@@ -379,7 +383,10 @@ namespace signalrtc
                 foreach (SIPRegistrarBinding binding in bindings)
                 {
                     SIPContactHeader bindingContact = new SIPContactHeader(null, SIPURI.ParseSIPURIRelaxed(binding.ContactURI));
-                    bindingContact.Expires = Convert.ToInt32(binding.ExpiryTime.Subtract(DateTime.UtcNow).TotalSeconds % Int32.MaxValue);
+                    if (!string.IsNullOrEmpty(binding.ExpiryTime))
+                    {
+                        bindingContact.Expires = Convert.ToInt32(DateTime.Parse(binding.ExpiryTime).Subtract(DateTime.UtcNow).TotalSeconds % Int32.MaxValue);
+                    }
                     contactHeaderList.Add(bindingContact);
                 }
 

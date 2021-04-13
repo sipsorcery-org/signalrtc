@@ -33,7 +33,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                return db.SIPCalls.Where(x => x.ID == id).FirstOrDefault();
+                return db.SIPCalls.Where(x => x.ID == id.ToString()).FirstOrDefault();
             }
         }
 
@@ -49,8 +49,8 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                call.ID = Guid.NewGuid();
-                call.Inserted = DateTime.UtcNow;
+                call.ID = Guid.NewGuid().ToString();
+                call.Inserted = DateTime.UtcNow.ToString("O");
 
                 db.SIPCalls.Add(call);
                 db.SaveChanges();
@@ -63,7 +63,7 @@ namespace signalrtc.DataAccess
         {
             using (var db = _dbContextFactory.CreateDbContext())
             {
-                var call = db.SIPCalls.Where(x => x.ID == id).SingleOrDefault();
+                var call = db.SIPCalls.Where(x => x.ID == id.ToString()).SingleOrDefault();
                 if (call != null)
                 {
                     db.SIPCalls.Remove(call);

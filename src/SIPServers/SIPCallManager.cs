@@ -183,7 +183,7 @@ namespace signalrtc
                 {
                     //cdr.BridgeID = dialogue.BridgeId;
                     //cdr.Hungup(hangupCause);
-                    m_cdrDataLayer.Hangup(cdr.ID, hangupCause);
+                    m_cdrDataLayer.Hangup(new Guid(cdr.ID), hangupCause);
                 }
                 else
                 {
@@ -281,7 +281,7 @@ namespace signalrtc
         {
             if (dialogue.BridgeId != Guid.Empty)
             {
-                SIPCall sipCall = m_sipCallDataLayer.Get(d => d.BridgeID == dialogue.BridgeId && d.ID != dialogue.Id);
+                SIPCall sipCall = m_sipCallDataLayer.Get(d => d.BridgeID == dialogue.BridgeId.ToString() && d.ID != dialogue.Id.ToString());
                 return (sipCall != null) ? sipCall.ToSIPDialogue() : null;
             }
             else

@@ -12,13 +12,13 @@ namespace signalrtc.DataAccess
             SIPRegistrarBindings = new HashSet<SIPRegistrarBinding>();
         }
 
-        public Guid ID { get; set; }
-        public Guid DomainID { get; set; }
-        public Guid? SIPDialPlanID { get; set; }
+        public string ID { get; set; }
+        public string DomainID { get; set; }
+        public string SIPDialPlanID { get; set; }
         public string SIPUsername { get; set; }
         public string HA1Digest { get; set; }
-        public bool IsDisabled { get; set; }
-        public DateTime Inserted { get; set; }
+        public long IsDisabled { get; set; }
+        public string Inserted { get; set; }
 
         public virtual SIPDomain Domain { get; set; }
         public virtual SIPDialPlan SIPDialPlan { get; set; }
