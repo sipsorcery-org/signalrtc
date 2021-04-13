@@ -9,7 +9,9 @@ dotnet ef dbcontext scaffold --use-database-names -o DataAccess/AutoGen --contex
 1. Set the desired optionsBuiler.Use* command from one of the above,
 2. Ensure the project still builds,
 3. On the command line in the same directory as the project file execute:
+ dotnet ef migrations add Initial
  dotnet ef migrations script 0 Initial
+4. For sqlite applied script manually using "DB Browser for Sqlite".
 
 ==> Store connection string in secret store
 examples\SIPExamples\SIPAspNetServer> dotnet user-secrets init
