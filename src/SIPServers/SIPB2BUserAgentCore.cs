@@ -143,11 +143,18 @@ namespace signalrtc
                 {
                     if (_inviteQueue.TryDequeue(out var uasTransaction))
                     {
-                        var sipAccount = GetCaller(uasTransaction).Result;
-
-                        if (uasTransaction.TransactionFinalResponse == null)
+                        try
                         {
-                            Forward(uasTransaction, sipAccount).Wait();
+                            var sipAccount = GetCaller(uasTransaction).Result;
+
+                            if (uasTransaction.TransactionFinalResponse == null)
+                            {
+                                Forward(uasTransaction, sipAccount).Wait();
+                            }
+                        }
+                        catch(Exception excp)
+                        {
+                            Logger.LogError(excp, "Exception ProcessInviteRequest.");
                         }
                     }
                 }

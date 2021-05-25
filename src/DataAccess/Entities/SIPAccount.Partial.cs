@@ -44,7 +44,7 @@ namespace signalrtc.DataAccess
         {
             return new SIPAccountModel
             {
-                ID = !string.IsNullOrEmpty(ID) ? new Guid(ID) : Guid.Empty,
+                ID = !string.IsNullOrEmpty(ID) ? ID : Guid.Empty.ToString(),
                 SIPUsername = SIPUsername,
                 HA1Digest = HA1Digest,
                 SIPDomain = SIPDomain,

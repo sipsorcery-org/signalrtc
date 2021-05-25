@@ -8,7 +8,7 @@ namespace signalrtc.Models
 {
     public class SIPAccountModel : ISIPAccount
     {
-        public Guid ID { get; set; }
+        public string ID { get; set; }
         public string SIPUsername { get; set; }
         public string SIPPassword { get; set; }
         public string HA1Digest { get; set; }

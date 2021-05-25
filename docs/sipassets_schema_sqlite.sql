@@ -142,3 +142,5 @@ return inUri.User switch
     _ => null  
 };
 ', '2021-01-09 20:37:27.993+00:00', '2021-02-08 22:02:26.643+00:00', 0);
+insert into SIPAccounts values ('95AAB7EA-9BD1-4256-B57E-8E9EBACC8960', '899e48ef-1267-4b53-8a1c-476a176a4e80', null, 'user', 'bba0da00f6b94f726912a3ab6342da6e', 0, '2021-02-01 13:13:09.050+00:00');
+insert into SIPAccounts values ('22369755-9D57-4743-A5C6-F83F1CDEA20E', '899e48ef-1267-4b53-8a1c-476a176a4e80', null, '197660', 'daa37feeefe043420774c9bd9bae725f', 0, '2021-02-01 13:13:09.050+00:00');
