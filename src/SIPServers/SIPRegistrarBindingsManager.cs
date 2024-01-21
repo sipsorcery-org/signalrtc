@@ -140,7 +140,7 @@ namespace signalrtc
             List<SIPContactHeader> contactHeaders,
             string callId,
             int cseq,
-            int expiresHeaderValue,
+            long expiresHeaderValue,
             string userAgent,
             out SIPResponseStatusCodesEnum responseStatus,
             out string responseMessage)
@@ -161,8 +161,8 @@ namespace signalrtc
                 foreach (SIPContactHeader contactHeader in contactHeaders)
                 {
                     SIPURI bindingURI = contactHeader.ContactURI.CopyOf();
-                    int contactHeaderExpiresValue = contactHeader.Expires;
-                    int bindingExpiry = 0;
+                    long contactHeaderExpiresValue = contactHeader.Expires;
+                    long bindingExpiry = 0;
 
                     if (bindingURI.Host == m_sipRegisterRemoveAll)
                     {
@@ -206,7 +206,7 @@ namespace signalrtc
                     }
                     else
                     {
-                        int requestedExpiry = (contactHeaderExpiresValue != -1) ? contactHeaderExpiresValue : expiresHeaderValue;
+                        long requestedExpiry = (contactHeaderExpiresValue != -1) ? contactHeaderExpiresValue : expiresHeaderValue;
                         requestedExpiry = (requestedExpiry == -1) ? maxAllowedExpiry : requestedExpiry;   // This will happen if the Expires header and the Expiry on the Contact are both missing.
                         bindingExpiry = (requestedExpiry > maxAllowedExpiry) ? maxAllowedExpiry : requestedExpiry;
                         bindingExpiry = (bindingExpiry < MINIMUM_EXPIRY_SECONDS) ? MINIMUM_EXPIRY_SECONDS : bindingExpiry;

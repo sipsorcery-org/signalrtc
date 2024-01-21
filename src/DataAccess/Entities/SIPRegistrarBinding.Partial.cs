@@ -59,7 +59,7 @@ namespace signalrtc.DataAccess
             SIPEndPoint remoteSIPEndPoint,
             SIPEndPoint proxySIPEndPoint,
             SIPEndPoint registrarSIPEndPoint,
-            int expirySeconds)
+            long expirySeconds)
         {
             ID = Guid.NewGuid().ToString();
             LastUpdate = DateTime.UtcNow.ToString("o");

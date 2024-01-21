@@ -133,7 +133,7 @@ namespace signalrtc
                     if (IPNetwork.TryParse(subnet, out var network))
                     {
                         isInSubnetFunctions.Add((ipaddr) =>
-                            ipaddr.AddressFamily == network.AddressFamily
+                            ipaddr.AddressFamily == network.BaseAddress.AddressFamily
                            && network.Contains(ipaddr));
                     }
                     else
@@ -262,7 +262,7 @@ namespace signalrtc
                             case SIPMethodsEnum.OPTIONS:
                                 SIPResponse optionsResponse = SIPResponse.GetResponse(sipRequest, SIPResponseStatusCodesEnum.Ok, null);
                                 optionsResponse.Header.Contact = new List<SIPContactHeader> { SIPContactHeader.GetDefaultSIPContactHeader(sipRequest.URI.Scheme) };
-                                optionsResponse.Header.Server = SIPConstants.SIP_USERAGENT_STRING;
+                                optionsResponse.Header.Server = SIPServerConstants.SIP_USERAGENT_STRING;
                                 await _sipTransport.SendResponseAsync(optionsResponse);
                                 break;
 

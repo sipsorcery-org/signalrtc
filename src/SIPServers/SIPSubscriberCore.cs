@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using SIPSorcery.SIP.App;
 using signalrtc.DataAccess;
+using System.Collections.Generic;
 
 namespace signalrtc
 {
@@ -44,7 +45,7 @@ namespace signalrtc
         private SIPAccountDataLayer m_sipAccountsDataLayer;
         private SIPDomainManager m_sipDomainManager;
 
-        private string m_serverAgent = SIPConstants.SIP_USERAGENT_STRING;
+        private string m_serverAgent = SIPServerConstants.SIP_USERAGENT_STRING;
         private ConcurrentQueue<SIPNonInviteTransaction> m_subscribeQueue = new ConcurrentQueue<SIPNonInviteTransaction>();
         private AutoResetEvent m_subscribeARE = new AutoResetEvent(false);
         private bool _exit = false;
@@ -166,7 +167,7 @@ namespace signalrtc
                     {
                         // 401 Response with a fresh nonce needs to be sent.
                         SIPResponse authReqdResponse = SIPResponse.GetResponse(req, authenticationResult.ErrorResponse, null);
-                        authReqdResponse.Header.AuthenticationHeader = authenticationResult.AuthenticationRequiredHeader;
+                        authReqdResponse.Header.AuthenticationHeaders = new List<SIPAuthenticationHeader> { authenticationResult.AuthenticationRequiredHeader };
                         subTx.SendResponse(authReqdResponse);
 
                         if (authenticationResult.ErrorResponse == SIPResponseStatusCodesEnum.Forbidden)

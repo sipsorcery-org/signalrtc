@@ -77,7 +77,7 @@ namespace signalrtc.DataAccess
 
         public SIPRegistrarBinding RefreshBinding(
             Guid id, 
-            int expiry, 
+            long expiry, 
             SIPEndPoint remoteSIPEndPoint, 
             SIPEndPoint proxySIPEndPoint, 
             SIPEndPoint registrarSIPEndPoint)

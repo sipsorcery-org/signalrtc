@@ -68,9 +68,9 @@ namespace signalrtc
             _logger.LogDebug("Creating Janus session...");
 
             RestClient client = new RestClient(_serverUrl);
-            client.UseNewtonsoftJson();
+            //client.UseNewtonsoftJson();
 
-            var infoReq = new RestRequest("info", DataFormat.Json);
+            var infoReq = new RestRequest("info");
             return await client.GetAsync<ServerInfo>(infoReq, _ct).ConfigureAwait(false);
         }
 
@@ -131,10 +131,10 @@ namespace signalrtc
         public async Task DestroySession()
         {
             RestClient client = new RestClient(_serverUrl);
-            client.UseNewtonsoftJson();
+            //client.UseNewtonsoftJson();
 
             var destroyReqBody = new JanusRequest { janus = JanusOperationsEnum.destroy };
-            var destroyReq = new RestRequest(_sessionID.ToString(), Method.POST, DataFormat.Json);
+            var destroyReq = new RestRequest(_sessionID.ToString(), Method.Post);
             destroyReq.AddJsonBody(destroyReqBody);
             var destroyResp = await client.ExecutePostAsync<JanusResponse>(destroyReq).ConfigureAwait(false);
 
@@ -151,11 +151,11 @@ namespace signalrtc
             _logger.LogDebug("Creating Janus session...");
 
             RestClient client = new RestClient(_serverUrl);
-            client.UseNewtonsoftJson();
+            //client.UseNewtonsoftJson();
 
             // Create session.
             var createSessionReq = new JanusRequest { janus = JanusOperationsEnum.create };
-            var sessReq = new RestRequest(string.Empty, Method.POST, DataFormat.Json);
+            var sessReq = new RestRequest(string.Empty, Method.Post);
             sessReq.AddJsonBody(createSessionReq);
             var sessResp = await client.ExecutePostAsync<JanusResponse>(sessReq, ct).ConfigureAwait(false);
 
@@ -178,7 +178,7 @@ namespace signalrtc
             try
             {
                 var longPollClient = new RestClient(_serverUrl);
-                longPollClient.UseNewtonsoftJson();
+                //longPollClient.UseNewtonsoftJson();
 
                 while (!_ct.IsCancellationRequested)
                 {
@@ -215,12 +215,12 @@ namespace signalrtc
         private async Task<ulong> AttachPlugin(string pluginType)
         {
             RestClient client = new RestClient(_serverUrl);
-            client.UseNewtonsoftJson();
+            //client.UseNewtonsoftJson();
 
             _logger.LogDebug($"Sending attach to {pluginType}.");
             var attachPluginReqBody = new AttachPluginRequest(pluginType);
             _logger.LogDebug(JsonConvert.SerializeObject(attachPluginReqBody));
-            var attachReq = new RestRequest(_sessionID.ToString(), Method.POST, DataFormat.Json);
+            var attachReq = new RestRequest(_sessionID.ToString(), Method.Post);
             attachReq.AddJsonBody(attachPluginReqBody);
             var attachResp = await client.ExecutePostAsync<JanusResponse>(attachReq, _ct).ConfigureAwait(false);
 
@@ -239,13 +239,13 @@ namespace signalrtc
         private async Task<JanusResponse> StartEcho(ulong echoPluginID, string offer)
         {
             RestClient client = new RestClient(_serverUrl);
-            client.UseNewtonsoftJson();
+            //client.UseNewtonsoftJson();
 
             // Send SDP offer to janus streaming plugin.
             _logger.LogDebug("Send SDP offer to Janus echo test plugin.");
             var echoTestReqBody = new EchoTestRequest("offer", offer);
             //_logger.LogDebug(JsonConvert.SerializeObject(echoTestReqBody));
-            var echoOfferReq = new RestRequest($"{_sessionID}/{echoPluginID}", Method.POST, DataFormat.Json);
+            var echoOfferReq = new RestRequest($"{_sessionID}/{echoPluginID}", Method.Post);
             echoOfferReq.AddJsonBody(echoTestReqBody);
             var offerResp = await client.ExecutePostAsync<JanusResponse>(echoOfferReq, _ct).ConfigureAwait(false);
 

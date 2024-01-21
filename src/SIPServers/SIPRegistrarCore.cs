@@ -88,7 +88,7 @@ namespace signalrtc
         private SIPRegistrarBindingDataLayer m_sipRegistrarBindingDataLayer;
         private SIPDomainManager m_sipDomainManager;
 
-        private string m_serverAgent = SIPConstants.SIP_USERAGENT_STRING;
+        private string m_serverAgent = SIPServerConstants.SIP_USERAGENT_STRING;
         private ConcurrentQueue<SIPNonInviteTransaction> m_registerQueue = new ConcurrentQueue<SIPNonInviteTransaction>();
         private AutoResetEvent m_registerARE = new AutoResetEvent(false);
         private bool _exit = false;
@@ -146,7 +146,7 @@ namespace signalrtc
             }
             else
             {
-                int requestedExpiry = GetRequestedExpiry(registerRequest);
+                long requestedExpiry = GetRequestedExpiry(registerRequest);
 
                 if (requestedExpiry > 0 && requestedExpiry < m_minimumBindingExpiry)
                 {
@@ -203,9 +203,9 @@ namespace signalrtc
             Logger.LogWarning($"ProcessRegisterRequest thread {Thread.CurrentThread.Name} stopping.");
         }
 
-        private int GetRequestedExpiry(SIPRequest registerRequest)
+        private long GetRequestedExpiry(SIPRequest registerRequest)
         {
-            int contactHeaderExpiry = (registerRequest.Header.Contact != null && registerRequest.Header.Contact.Count > 0) ? registerRequest.Header.Contact[0].Expires : -1;
+            long contactHeaderExpiry = (registerRequest.Header.Contact != null && registerRequest.Header.Contact.Count > 0) ? registerRequest.Header.Contact[0].Expires : -1;
             return (contactHeaderExpiry == -1) ? registerRequest.Header.Expires : contactHeaderExpiry;
         }
 
@@ -218,7 +218,7 @@ namespace signalrtc
                 SIPToHeader toHeader = sipRequest.Header.To;
                 string toUser = toHeader.ToURI.User;
                 string canonicalDomain = m_sipDomainManager.GetCanonicalDomain(toHeader.ToURI.HostAddress);
-                int requestedExpiry = GetRequestedExpiry(sipRequest);
+                long requestedExpiry = GetRequestedExpiry(sipRequest);
 
                 if (canonicalDomain == null)
                 {
@@ -250,7 +250,7 @@ namespace signalrtc
                         {
                             // 401 Response with a fresh nonce needs to be sent.
                             SIPResponse authReqdResponse = SIPResponse.GetResponse(sipRequest, authenticationResult.ErrorResponse, null);
-                            authReqdResponse.Header.AuthenticationHeader = authenticationResult.AuthenticationRequiredHeader;
+                            authReqdResponse.Header.AuthenticationHeaders = new List<SIPAuthenticationHeader> { authenticationResult.AuthenticationRequiredHeader };
                             registerTransaction.SendResponse(authReqdResponse);
 
                             if (authenticationResult.ErrorResponse == SIPResponseStatusCodesEnum.Forbidden)
