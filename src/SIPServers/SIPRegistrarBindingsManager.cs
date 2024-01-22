@@ -214,7 +214,7 @@ namespace signalrtc
                         bindingURI.Parameters.Remove(m_sipExpiresParameterKey);
 
                         //SIPRegistrarBinding binding = GetBindingForContactURI(bindings, bindingURI.ToString());
-                        SIPRegistrarBinding binding = bindings.Where(x => x.ContactURI == bindingURI.ToString()).FirstOrDefault();
+                        SIPRegistrarBinding binding = bindings.Where(x => x.ContactURI == bindingURI.ToString()).OrderBy(x => x.Expiry).FirstOrDefault();
 
                         if (binding != null)
                         {
