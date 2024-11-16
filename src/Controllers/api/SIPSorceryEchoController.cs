@@ -5,6 +5,9 @@
 // WebRTC echo test daemon. The reason to use this controller is to allow the 
 // echo test service to operate on a well known end point.
 //
+// The WebRTC echo test end point can be created with:
+//sipsorcery\examples\webrtccmdline> dotnet run --echoserver
+//
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)
 // 

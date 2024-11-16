@@ -2,7 +2,11 @@
 // Filename: SIPHostedService.cs
 //
 // Description: This class is designed to act as a singleton in an ASP.Net Core
-// server application to manage the SIP transport and server cores. 
+// server application to manage the SIP transport and server cores.
+//
+// Sanity Test:
+// examples\SIPExamples\UserAgentClient>dotnet run 215@localhost # Tests the B2B server can place calls.
+//examples\SIPExamples\UserAgentRegister>dotnet run localhost user passwor # Test SIP Registrar server.
 //
 // Author(s):
 // Aaron Clauson (aaron@sipsorcery.com)
@@ -28,8 +32,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using signalrtc.DataAccess;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore.Internal;
 
 namespace signalrtc
 {

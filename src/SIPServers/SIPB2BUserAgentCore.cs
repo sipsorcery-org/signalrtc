@@ -204,9 +204,13 @@ namespace signalrtc
                         uasTx.SendFinalResponse(SIPResponse.GetResponse(invReq, SIPResponseStatusCodesEnum.Forbidden, null));
 
                         OnAcceptCallFailure?.Invoke(uasTx.TransactionRequest.RemoteSIPEndPoint, CallFailureEnum.NoSIPAccount, invReq);
-                    }
 
-                    return sipAccount.ToSIPAccountModel();
+                        return null;
+                    }
+                    else
+                    {
+                        return sipAccount.ToSIPAccountModel();
+                    }
                 }
             }
         }
