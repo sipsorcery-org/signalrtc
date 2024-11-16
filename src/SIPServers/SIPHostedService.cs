@@ -28,6 +28,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SIPSorcery.SIP;
 using signalrtc.DataAccess;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore.Internal;
 
 namespace signalrtc
 {

@@ -14,7 +14,6 @@
 //-----------------------------------------------------------------------------
 
 using System.IO;
-using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -45,13 +44,23 @@ namespace signalrtc
         {
             services.AddLogging();
 
+            var dbContextOptions = Configuration.GetConnectionString("SIPAssetsLite");
+
+            // Explicitly register DbContextOptions
+            services.AddSingleton(provider =>
+            {
+                var optionsBuilder = new DbContextOptionsBuilder<SIPAssetsDbContext>();
+                optionsBuilder.UseSqlite(dbContextOptions);
+                return optionsBuilder.Options;
+            });
+
             // DB Context factory is used by the SIP servers.
             services.AddDbContextFactory<SIPAssetsDbContext>(options =>
-                options.UseSqlite(Configuration.GetConnectionString("SIPAssetsLite")));
+                options.UseSqlite(dbContextOptions));
 
             // DB Context is used directly by web API controllers.
             services.AddDbContext<SIPAssetsDbContext>(options =>
-                options.UseSqlite(Configuration.GetConnectionString("SIPAssetsLite")));
+                options.UseSqlite(dbContextOptions));
 
             //services.AddDistributedSqlServerCache(opts =>
             //{
